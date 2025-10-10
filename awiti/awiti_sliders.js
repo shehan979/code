@@ -45,6 +45,8 @@ document.addEventListener("DOMContentLoaded", function () {
     updateSlider(currentIndex - 1);
   });
 
+  
+
   rightArrow.addEventListener("click", (e) => {
     e.preventDefault();
     updateSlider(currentIndex + 1);
