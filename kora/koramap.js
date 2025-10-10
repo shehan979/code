@@ -1,16 +1,17 @@
-console.log("ðŸŸ¡ Map script started â€” waiting for all CMS items...");
+console.log("🟡 Map script started — waiting for all CMS items...");
 
 let map, clusterer;
 let markers = [];
 let infoWindows = [];
 let mapReady = false;
-let mapFullyInitialized = false; // âœ… stop all watchers when done
+let mapFullyInitialized = false; // ✅ stop all watchers when done
+
 // --- Initialize Google Map ---
 function initMap() {
-  console.log("ðŸ§© Google Maps API ready â€” initializing map");
+  console.log("🧩 Google Maps API ready — initializing map");
   const mapEl = document.getElementById("map_canvas");
   if (!mapEl) {
-    console.error("âŒ Map canvas not found!");
+    console.error("❌ Map canvas not found!");
     return;
   }
 
@@ -32,10 +33,10 @@ function initMap() {
 function loadMapMarkers() {
   if (!mapReady) return;
   const items = document.querySelectorAll(".map-loc-item[data-lat][data-lng]");
-  console.log(`âœ… Found ${items.length} .map-loc-item elements`);
+  console.log(`✅ Found ${items.length} .map-loc-item elements`);
 
   if (!items.length) {
-    console.warn("âš ï¸ No CMS map items yet â€” retrying...");
+    console.warn("⚠️ No CMS map items yet — retrying...");
     setTimeout(loadMapMarkers, 1000);
     return;
   }
@@ -176,8 +177,8 @@ function loadMapMarkers() {
   });
 
   if (!bounds.isEmpty()) map.fitBounds(bounds);
-  console.log(`ðŸŸ¢ Map ready with ${markers.length} markers`);
-  mapFullyInitialized = true; // âœ… mark ready
+  console.log(`🟢 Map ready with ${markers.length} markers`);
+  mapFullyInitialized = true; // ✅ mark ready
 }
 
 // --- Wait for CMS + loader control ---
@@ -191,7 +192,7 @@ function waitForAllCMSItems() {
   const check = setInterval(() => {
     if (mapFullyInitialized) {
       clearInterval(check);
-      console.log("ðŸ›‘ Map already ready â€” stop polling");
+      console.log("🛑 Map already ready — stop polling");
       return;
     }
 
@@ -199,19 +200,19 @@ function waitForAllCMSItems() {
     const finsweetReady =
       window.fsAttributes?.cms &&
       window.fsAttributes.cms.listInstances.length > 0;
-    console.log(`â³ CMS check #${++attempts}: found ${items.length} items`);
+    console.log(`⏳ CMS check #${++attempts}: found ${items.length} items`);
 
     if (items.length > 0 && finsweetReady) {
       clearInterval(check);
-      console.log("âœ… CMS fully loaded â€” building markers");
+      console.log("✅ CMS fully loaded — building markers");
       loadMapMarkers();
       if (loadingEl) loadingEl.style.display = "none";
-      console.log("ðŸŸ¢ Initialization complete â€” polling stopped");
+      console.log("🟢 Initialization complete — polling stopped");
       mapFullyInitialized = true;
       rebindOnCMSLoad(false); // one-time rebind
     } else if (attempts >= maxAttempts) {
       clearInterval(check);
-      console.warn("âš ï¸ CMS not fully detected â€” fallback load");
+      console.warn("⚠️ CMS not fully detected — fallback load");
       loadMapMarkers();
       if (loadingEl) loadingEl.style.display = "none";
       mapFullyInitialized = true;
@@ -220,7 +221,7 @@ function waitForAllCMSItems() {
   }, 1000);
 }
 
-// --- CMS â†’ Marker focus ---
+// --- CMS → Marker focus ---
 function bindCMSMarkerClicks() {
   const links = document.querySelectorAll(".map-icon-border[id]");
   if (!links.length || !markers.length) {
@@ -247,20 +248,20 @@ function bindCMSMarkerClicks() {
       google.maps.event.trigger(targetMarker, "click");
       map.panTo(targetMarker.getPosition());
       map.setZoom(13);
-      console.log(`ðŸŽ¯ Focused marker for: ${slug}`);
+      console.log(`🎯 Focused marker for: ${slug}`);
     });
   });
 
-  console.log("âœ… CMS â†’ Marker click binding complete");
+  console.log("✅ CMS → Marker click binding complete");
 }
 
 // --- Rebind logic ---
 function rebindOnCMSLoad(keepWatching = true) {
   if (mapFullyInitialized && !keepWatching) {
-    console.log("ðŸ›‘ Stopping CMS rebind watcher (initialization complete)");
+    console.log("🛑 Stopping CMS rebind watcher (initialization complete)");
     bindCMSMarkerClicks();
 
-    // âœ… Final loader cleanup
+    // ✅ Final loader cleanup
     const loadingEl = document.querySelector(".map_loading_screen");
     if (loadingEl) loadingEl.style.display = "none";
 
@@ -275,7 +276,7 @@ function rebindOnCMSLoad(keepWatching = true) {
 
   if (window.fsAttributes && window.fsAttributes.cms && keepWatching) {
     window.fsAttributes.cms.on("load", () => {
-      console.log("ðŸ” CMS batch loaded â€” rebinding");
+      console.log("🔁 CMS batch loaded — rebinding");
       tryBind();
     });
   }
@@ -297,7 +298,7 @@ window.addEventListener("load", () => {
 });
 
 /* ============================================================
-   ðŸ“ Location Search + 50 km Radius Filter (after map load)
+   📍 Location Search + 50 km Radius Filter (after map load)
 ============================================================ */
 function initLocationSearch() {
   const input = document.getElementById("searchmap");
@@ -320,7 +321,7 @@ function initLocationSearch() {
     if (input.value.trim() === "") resetRadiusFilter();
   });
 
-  console.log("âœ… Location search initialized");
+  console.log("✅ Location search initialized");
 }
 
 function filterByRadius(center, radiusKm = 50) {
@@ -349,17 +350,17 @@ function filterByRadius(center, radiusKm = 50) {
   });
 
   if (visibleCount > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
-  console.log(`ðŸ§­ Showing ${visibleCount} items within ${radiusKm} km`);
+  console.log(`🧭 Showing ${visibleCount} items within ${radiusKm} km`);
 }
 
 function resetRadiusFilter() {
-  // 1ï¸âƒ£ Show all CMS items again
+  // 1️⃣ Show all CMS items again
   document.querySelectorAll(".w-dyn-item").forEach((el) => (el.style.display = "block"));
 
-  // 2ï¸âƒ£ Re-add all markers to map
+  // 2️⃣ Re-add all markers to map
   markers.forEach((m) => m.setMap(map));
 
-  // 3ï¸âƒ£ Recreate clusterer with custom yellow styling
+  // 3️⃣ Recreate clusterer with custom yellow styling
   if (clusterer) clusterer.clearMarkers();
   clusterer = new markerClusterer.MarkerClusterer({
     map,
@@ -387,7 +388,7 @@ function resetRadiusFilter() {
     },
   });
 
-  // 4ï¸âƒ£ Recalculate bounds + refit map
+  // 4️⃣ Recalculate bounds + refit map
   const bounds = new google.maps.LatLngBounds();
   markers.forEach((m) => {
     if (m.getMap()) bounds.extend(m.getPosition());
@@ -400,7 +401,7 @@ function resetRadiusFilter() {
     map.setZoom(7);
   }
 
-  console.log("ðŸ” Radius filter reset + map refitted + clusters recolored");
+  console.log("🔁 Radius filter reset + map refitted + clusters recolored");
 }
 
 
