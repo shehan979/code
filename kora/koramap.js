@@ -5,7 +5,6 @@ let markers = [];
 let infoWindows = [];
 let mapReady = false;
 let mapFullyInitialized = false; // âœ… stop all watchers when done
-
 // --- Initialize Google Map ---
 function initMap() {
   console.log("ðŸ§© Google Maps API ready â€” initializing map");
@@ -413,4 +412,3 @@ const readyCheck = setInterval(() => {
     initLocationSearch();
   }
 }, 1000);
-
