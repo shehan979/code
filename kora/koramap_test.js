@@ -325,82 +325,33 @@ function initLocationSearch() {
 }
 
 function filterByRadius(center, radiusKm = 50) {
-    if (!markers.length) return;
-  
-    // 1️⃣ Close all open info windows (popups)
-    if (infoWindows && infoWindows.length) {
-      infoWindows.forEach((iw) => {
-        try {
-          iw.close();
-        } catch (e) {
-          console.warn("⚠️ InfoWindow close error:", e);
-        }
-      });
-      infoWindows = [];
-    }
-  
-    const radiusM = radiusKm * 1000;
-    const bounds = new google.maps.LatLngBounds();
-    let visibleCount = 0;
-  
-    // 2️⃣ Show / hide CMS items and markers by radius
-    document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
-      const lat = parseFloat(el.dataset.lat);
-      const lng = parseFloat(el.dataset.lng);
-      if (isNaN(lat) || isNaN(lng)) return;
-  
-      const pos = new google.maps.LatLng(lat, lng);
-      const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
-  
-      if (distance <= radiusM) {
-        el.closest(".w-dyn-item").style.display = "block";
-        markers[i].setMap(map);
-        bounds.extend(pos);
-        visibleCount++;
-      } else {
-        el.closest(".w-dyn-item").style.display = "none";
-        markers[i].setMap(null);
-      }
-    });
-  
-    // 3️⃣ Rebuild clusters only for visible markers
-    if (clusterer) clusterer.clearMarkers();
-    const visibleMarkers = markers.filter((m) => m.getMap());
-    clusterer = new markerClusterer.MarkerClusterer({
-      map,
-      markers: visibleMarkers,
-      renderer: {
-        render: ({ count, position }) => {
-          const color = "#fc0";
-          const size = 40 + Math.log(count) * 8;
-          const svg =
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">' +
-            `<circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>` +
-            `<text x="50%" y="50%" dy="0.35em" text-anchor="middle" fill="#000" font-family="sans-serif" font-size="18">${count}</text>` +
-            "</svg>";
-          return new google.maps.Marker({
-            position,
-            icon: {
-              url: `data:image/svg+xml;base64,${window.btoa(svg)}`,
-              scaledSize: new google.maps.Size(size, size),
-            },
-            zIndex: google.maps.Marker.MAX_ZINDEX + count,
-          });
-        },
-      },
-    });
-  
-    // 4️⃣ Focus map to radius area
-    if (visibleCount > 0 && !bounds.isEmpty()) {
-      map.fitBounds(bounds);
+  if (!markers.length) return;
+  const radiusM = radiusKm * 1000;
+  const bounds = new google.maps.LatLngBounds();
+  let visibleCount = 0;
+
+  document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
+    const lat = parseFloat(el.dataset.lat);
+    const lng = parseFloat(el.dataset.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const pos = new google.maps.LatLng(lat, lng);
+    const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
+
+    if (distance <= radiusM) {
+      el.closest(".w-dyn-item").style.display = "block";
+      markers[i].setMap(map);
+      bounds.extend(pos);
+      visibleCount++;
     } else {
-      map.setCenter(center);
-      map.setZoom(11);
+      el.closest(".w-dyn-item").style.display = "none";
+      markers[i].setMap(null);
     }
-  
-    console.log(`🧭 Showing ${visibleCount} items within ${radiusKm} km`);
-  }
-  
+  });
+
+  if (visibleCount > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
+  console.log(`🧭 Showing ${visibleCount} items within ${radiusKm} km`);
+}
 
 function resetRadiusFilter() {
     console.log("🔁 Resetting map, markers, clusters, and popups...");
