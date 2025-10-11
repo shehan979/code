@@ -334,75 +334,74 @@ const readyCheck = setInterval(() => {
 
 
 /* ============================================================
-   🧭 Fixed: CMS Filter on Map Move / Zoom
-   → Updates CMS list to show only items inside visible map area
+   🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync (Final)
 ============================================================ */
-function initMapViewFilter() {
-  if (!map || !markers.length) return setTimeout(initMapViewFilter, 1000);
-
-  console.log("🧭 Map view-based CMS filter active…");
-
-  // Helper: wait for map bounds to be ready
-  function getMapBoundsSafe() {
-    const bounds = map.getBounds();
-    if (!bounds) {
-      console.warn("⚠️ Map bounds not ready yet — retrying...");
-      return null;
-    }
-    return bounds;
+function initLiveCMSFilterOnMapMove() {
+  if (!map || !markers.length) {
+    console.warn("⏳ Waiting for map and markers to be ready for live filter...");
+    return setTimeout(initLiveCMSFilterOnMapMove, 800);
   }
 
-  // Core function: show only CMS items visible on map
-  function filterVisibleCMSItems() {
-    const input = document.getElementById("searchmap");
-    if (input && input.value.trim() !== "") return; // 🚫 Skip if search active
+  console.log("🧭 Live CMS filtering bound to map movement...");
 
-    const bounds = getMapBoundsSafe();
-    if (!bounds) return; // prevent null errors
+  // === Helper: safely get map bounds ===
+  function safeBounds() {
+    const b = map.getBounds();
+    if (!b) {
+      console.warn("⚠️ Bounds not ready — skipping filter this frame");
+      return null;
+    }
+    return b;
+  }
+
+  // === Core logic: show only CMS items within current view ===
+  function filterCMSByVisibleMapArea() {
+    const input = document.getElementById("searchmap");
+    // 🚫 Skip when user currently has a search filter active
+    if (input && input.value.trim() !== "") return;
+
+    const bounds = safeBounds();
+    if (!bounds) return;
 
     let visibleCount = 0;
+    const cmsItems = document.querySelectorAll(".map-loc-item[data-lat][data-lng]");
 
-    // Use marker positions directly — independent of CMS item order
-    markers.forEach((marker) => {
-      const position = marker.getPosition();
-      const inView = bounds.contains(position);
+    cmsItems.forEach((el) => {
+      const lat = parseFloat(el.dataset.lat);
+      const lng = parseFloat(el.dataset.lng);
+      if (isNaN(lat) || isNaN(lng)) return;
 
-      // Find CMS element linked to this marker (by lat/lng match)
-      const lat = marker.position.lat();
-      const lng = marker.position.lng();
-      const el = Array.from(document.querySelectorAll(".map-loc-item[data-lat][data-lng]")).find(
-        (item) =>
-          Math.abs(parseFloat(item.dataset.lat) - lat) < 0.0001 &&
-          Math.abs(parseFloat(item.dataset.lng) - lng) < 0.0001
-      );
-      if (!el) return;
+      const pos = new google.maps.LatLng(lat, lng);
+      const cmsWrapper = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
+      if (!cmsWrapper) return;
 
-      const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
-      if (!cmsItem) return;
-
-      if (inView) {
-        cmsItem.style.display = "block";
+      if (bounds.contains(pos)) {
+        cmsWrapper.style.display = "block";
         visibleCount++;
       } else {
-        cmsItem.style.display = "none";
+        cmsWrapper.style.display = "none";
       }
     });
 
-    console.log(`🧩 CMS list filtered: ${visibleCount} items visible on map`);
+    console.log(`📍 Live map filter → ${visibleCount} CMS items in view`);
   }
 
-  // --- Run filter after each zoom or drag ---
+  // === Event hook with safe debounce ===
+  let moveTimer;
   map.addListener("idle", () => {
-    setTimeout(filterVisibleCMSItems, 300); // small delay ensures bounds ready
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => {
+      filterCMSByVisibleMapArea();
+    }, 400); // short delay ensures clusters finished drawing
   });
 
-  console.log("✅ Map view-based CMS filtering initialized (stable)");
+  console.log("✅ Live CMS map-bounds filtering initialized successfully");
 }
 
-// --- Wait for map fully initialized ---
-const mapFilterCheck = setInterval(() => {
-  if (mapFullyInitialized && markers.length > 0 && map) {
-    clearInterval(mapFilterCheck);
-    initMapViewFilter();
+// --- Activate once map & markers are fully initialized ---
+const cmsMapFilterReady = setInterval(() => {
+  if (mapFullyInitialized && map && markers.length > 0) {
+    clearInterval(cmsMapFilterReady);
+    initLiveCMSFilterOnMapMove();
   }
-}, 1000);
+}, 800);
