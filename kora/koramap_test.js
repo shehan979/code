@@ -324,8 +324,7 @@ function initLocationSearch() {
   console.log("✅ Location search initialized");
 }
 
-/* === Popup-close fix added here === */
-function filterByRadius(center, radiusKm = 50) {
+/* === Popup-close fix added here === */function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
 
   // 🧹 Close all open InfoWindows before focusing
@@ -344,6 +343,7 @@ function filterByRadius(center, radiusKm = 50) {
   const bounds = new google.maps.LatLngBounds();
   let visibleCount = 0;
 
+  // ✅ Loop through all CMS map items
   document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
     const lat = parseFloat(el.dataset.lat);
     const lng = parseFloat(el.dataset.lng);
@@ -352,20 +352,29 @@ function filterByRadius(center, radiusKm = 50) {
     const pos = new google.maps.LatLng(lat, lng);
     const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
 
+    // ✅ Find parent .w-dyn-item safely (handles nested CMS or Finsweet structures)
+    const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
+    if (!cmsItem) return;
+
     if (distance <= radiusM) {
-      el.closest(".w-dyn-item").style.display = "block";
+      cmsItem.style.display = "block";
       markers[i].setMap(map);
       bounds.extend(pos);
       visibleCount++;
     } else {
-      el.closest(".w-dyn-item").style.display = "none";
+      cmsItem.style.display = "none";
       markers[i].setMap(null);
     }
   });
 
-  if (visibleCount > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
-  console.log(`🧭 Showing ${visibleCount} items within ${radiusKm} km`);
+  // ✅ Adjust map to visible markers
+  if (visibleCount > 0 && !bounds.isEmpty()) {
+    map.fitBounds(bounds);
+  }
+
+  console.log(`🧭 Showing ${visibleCount} CMS items within ${radiusKm} km radius`);
 }
+
 
 function resetRadiusFilter() {
   // 1️⃣ Show all CMS items again
