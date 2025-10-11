@@ -324,8 +324,22 @@ function initLocationSearch() {
   console.log("✅ Location search initialized");
 }
 
+/* === Popup-close fix added here === */
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
+
+  // 🧹 Close all open InfoWindows before focusing
+  if (infoWindows && infoWindows.length) {
+    infoWindows.forEach((iw) => {
+      try {
+        iw.close();
+      } catch (e) {
+        console.warn("⚠️ InfoWindow close error:", e);
+      }
+    });
+    infoWindows = [];
+  }
+
   const radiusM = radiusKm * 1000;
   const bounds = new google.maps.LatLngBounds();
   let visibleCount = 0;
@@ -357,10 +371,16 @@ function resetRadiusFilter() {
   // 1️⃣ Show all CMS items again
   document.querySelectorAll(".w-dyn-item").forEach((el) => (el.style.display = "block"));
 
-  // 2️⃣ Re-add all markers to map
+  // 2️⃣ Close all open popups
+  if (infoWindows && infoWindows.length) {
+    infoWindows.forEach((iw) => iw.close());
+    infoWindows = [];
+  }
+
+  // 3️⃣ Re-add all markers to map
   markers.forEach((m) => m.setMap(map));
 
-  // 3️⃣ Recreate clusterer with custom yellow styling
+  // 4️⃣ Recreate clusterer with custom yellow styling
   if (clusterer) clusterer.clearMarkers();
   clusterer = new markerClusterer.MarkerClusterer({
     map,
@@ -388,7 +408,7 @@ function resetRadiusFilter() {
     },
   });
 
-  // 4️⃣ Recalculate bounds + refit map
+  // 5️⃣ Recalculate bounds + refit map
   const bounds = new google.maps.LatLngBounds();
   markers.forEach((m) => {
     if (m.getMap()) bounds.extend(m.getPosition());
@@ -403,8 +423,6 @@ function resetRadiusFilter() {
 
   console.log("🔁 Radius filter reset + map refitted + clusters recolored");
 }
-
-
 
 // --- Delay init of location search until map fully ready ---
 const readyCheck = setInterval(() => {
