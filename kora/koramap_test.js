@@ -354,55 +354,72 @@ function filterByRadius(center, radiusKm = 50) {
 }
 
 function resetRadiusFilter() {
-  // 1️⃣ Show all CMS items again
-  document.querySelectorAll(".w-dyn-item").forEach((el) => (el.style.display = "block"));
-
-  // 2️⃣ Re-add all markers to map
-  markers.forEach((m) => m.setMap(map));
-
-  // 3️⃣ Recreate clusterer with custom yellow styling
-  if (clusterer) clusterer.clearMarkers();
-  clusterer = new markerClusterer.MarkerClusterer({
-    map,
-    markers,
-    renderer: {
-      render: ({ count, position }) => {
-        const color = "#fc0";
-        const size = 40 + Math.log(count) * 8;
-        const svg = window.btoa(`
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
-            <circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>
-            <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
-              fill="#000" font-family="sans-serif" font-size="18">${count}</text>
-          </svg>
-        `);
-        return new google.maps.Marker({
-          position,
-          icon: {
-            url: `data:image/svg+xml;base64,${svg}`,
-            scaledSize: new google.maps.Size(size, size),
-          },
-          zIndex: google.maps.Marker.MAX_ZINDEX + count,
-        });
+    console.log("🔁 Resetting map, markers, clusters, and popups...");
+  
+    // 1️⃣ Close all open info windows (popups)
+    if (infoWindows && infoWindows.length) {
+      infoWindows.forEach((iw) => {
+        try {
+          iw.close();
+        } catch (e) {
+          console.warn("⚠️ InfoWindow close error:", e);
+        }
+      });
+      infoWindows = [];
+    }
+  
+    // 2️⃣ Show all CMS items again
+    document.querySelectorAll(".w-dyn-item").forEach((el) => {
+      el.style.display = "block";
+    });
+  
+    // 3️⃣ Re-add all markers to map
+    markers.forEach((m) => m.setMap(map));
+  
+    // 4️⃣ Recreate clusterer with custom yellow styling
+    if (clusterer) clusterer.clearMarkers();
+    clusterer = new markerClusterer.MarkerClusterer({
+      map,
+      markers,
+      renderer: {
+        render: ({ count, position }) => {
+          const color = "#fc0";
+          const size = 40 + Math.log(count) * 8;
+          const svg = window.btoa(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+              <circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>
+              <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
+                fill="#000" font-family="sans-serif" font-size="18">${count}</text>
+            </svg>
+          `);
+          return new google.maps.Marker({
+            position,
+            icon: {
+              url: `data:image/svg+xml;base64,${svg}`,
+              scaledSize: new google.maps.Size(size, size),
+            },
+            zIndex: google.maps.Marker.MAX_ZINDEX + count,
+          });
+        },
       },
-    },
-  });
-
-  // 4️⃣ Recalculate bounds + refit map
-  const bounds = new google.maps.LatLngBounds();
-  markers.forEach((m) => {
-    if (m.getMap()) bounds.extend(m.getPosition());
-  });
-
-  if (!bounds.isEmpty()) {
-    map.fitBounds(bounds);
-  } else {
-    map.setCenter({ lat: 51.1, lng: 13.7 }); // fallback
-    map.setZoom(7);
+    });
+  
+    // 5️⃣ Recalculate bounds + refit map
+    const bounds = new google.maps.LatLngBounds();
+    markers.forEach((m) => {
+      if (m.getMap()) bounds.extend(m.getPosition());
+    });
+  
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds);
+    } else {
+      map.setCenter({ lat: 51.1, lng: 13.7 }); // fallback
+      map.setZoom(7);
+    }
+  
+    console.log("✅ Map fully reset — popups closed, clusters recolored, and view refitted");
   }
-
-  console.log("🔁 Radius filter reset + map refitted + clusters recolored");
-}
+  
 
 
 
