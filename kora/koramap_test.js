@@ -41,7 +41,6 @@ function loadMapMarkers() {
     return;
   }
 
-  // Clear previous state
   markers.forEach((m) => m.setMap(null));
   markers = [];
   infoWindows.forEach((i) => i.close());
@@ -64,7 +63,7 @@ function loadMapMarkers() {
     const slug = el.closest("[data-slug]")?.dataset.slug || "";
     const pos = { lat, lng };
 
-    // --- Custom yellow drop-pin marker ---
+    // --- Custom yellow marker ---
     const svgMarker = {
       path: "M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7zm0 9.5c-1.39 0-2.5-1.12-2.5-2.5S10.61 6.5 12 6.5s2.5 1.12 2.5 2.5S13.39 11.5 12 11.5z",
       fillColor: "#fc0",
@@ -82,7 +81,7 @@ function loadMapMarkers() {
       icon: svgMarker,
     });
 
-    // --- Webflow-styled popup ---
+    // --- Webflow-style popup ---
     const infoHTML = `
       <div class="location-popup no-border">
         <div class="top-div">
@@ -330,11 +329,8 @@ const readyCheck = setInterval(() => {
   }
 }, 1000);
 
-
-
-
 /* ============================================================
-   🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync (Final)
+   🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync
 ============================================================ */
 function initLiveCMSFilterOnMapMove() {
   if (!map || !markers.length) {
@@ -344,37 +340,27 @@ function initLiveCMSFilterOnMapMove() {
 
   console.log("🧭 Live CMS filtering bound to map movement...");
 
-  // === Helper: safely get map bounds ===
   function safeBounds() {
     const b = map.getBounds();
-    if (!b) {
-      console.warn("⚠️ Bounds not ready — skipping filter this frame");
-      return null;
-    }
+    if (!b) return null;
     return b;
   }
 
-  // === Core logic: show only CMS items within current view ===
   function filterCMSByVisibleMapArea() {
     const input = document.getElementById("searchmap");
-    // 🚫 Skip when user currently has a search filter active
     if (input && input.value.trim() !== "") return;
-
     const bounds = safeBounds();
     if (!bounds) return;
 
     let visibleCount = 0;
     const cmsItems = document.querySelectorAll(".map-loc-item[data-lat][data-lng]");
-
     cmsItems.forEach((el) => {
       const lat = parseFloat(el.dataset.lat);
       const lng = parseFloat(el.dataset.lng);
       if (isNaN(lat) || isNaN(lng)) return;
-
       const pos = new google.maps.LatLng(lat, lng);
       const cmsWrapper = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
       if (!cmsWrapper) return;
-
       if (bounds.contains(pos)) {
         cmsWrapper.style.display = "block";
         visibleCount++;
@@ -382,23 +368,31 @@ function initLiveCMSFilterOnMapMove() {
         cmsWrapper.style.display = "none";
       }
     });
-
     console.log(`📍 Live map filter → ${visibleCount} CMS items in view`);
   }
 
-  // === Event hook with safe debounce ===
+  // ✅ Enhanced event hook
   let moveTimer;
   map.addListener("idle", () => {
     clearTimeout(moveTimer);
     moveTimer = setTimeout(() => {
+      const input = document.getElementById("searchmap");
+      if (!input) return;
+
+      // 🧠 Clear search if user moves map after radius filter
+      if (input.value.trim() !== "") {
+        console.log("🔄 Map moved — clearing search input and resuming live filter");
+        input.value = "";
+        resetRadiusFilter();
+      }
+
       filterCMSByVisibleMapArea();
-    }, 400); // short delay ensures clusters finished drawing
+    }, 400);
   });
 
   console.log("✅ Live CMS map-bounds filtering initialized successfully");
 }
 
-// --- Activate once map & markers are fully initialized ---
 const cmsMapFilterReady = setInterval(() => {
   if (mapFullyInitialized && map && markers.length > 0) {
     clearInterval(cmsMapFilterReady);
