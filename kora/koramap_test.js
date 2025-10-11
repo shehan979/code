@@ -327,7 +327,9 @@ function initLocationSearch() {
 function filterByRadius(center, radiusKm = 50) {
     if (!markers.length) return;
   
-    // 🧹 1️⃣ Close all open info windows
+    console.log("📍 Filtering by radius (focus only, no hiding markers)");
+  
+    // 1️⃣ Close all open popups
     if (infoWindows && infoWindows.length) {
       infoWindows.forEach((iw) => {
         try {
@@ -339,7 +341,17 @@ function filterByRadius(center, radiusKm = 50) {
       infoWindows = [];
     }
   
-    // 2️⃣ Compute distances & bounds for markers inside radius
+    // 2️⃣ Make sure ALL CMS items stay visible
+    document.querySelectorAll(".w-dyn-item").forEach((el) => {
+      el.style.display = "block";
+    });
+  
+    // 3️⃣ Make sure ALL markers stay visible on map
+    markers.forEach((m) => {
+      if (!m.getMap()) m.setMap(map);
+    });
+  
+    // 4️⃣ Calculate which markers are inside the radius (for fitting bounds)
     const radiusM = radiusKm * 1000;
     const bounds = new google.maps.LatLngBounds();
     let insideCount = 0;
@@ -353,12 +365,7 @@ function filterByRadius(center, radiusKm = 50) {
       }
     });
   
-    // 3️⃣ Keep all CMS items visible — no hiding
-    document.querySelectorAll(".w-dyn-item").forEach((el) => {
-      el.style.display = "block";
-    });
-  
-    // 4️⃣ Draw or update a radius circle overlay
+    // 5️⃣ Draw yellow translucent circle
     if (window.searchCircle) window.searchCircle.setMap(null);
     window.searchCircle = new google.maps.Circle({
       strokeColor: "#fc0",
@@ -371,7 +378,7 @@ function filterByRadius(center, radiusKm = 50) {
       radius: radiusM,
     });
   
-    // 5️⃣ Focus map on radius markers (don’t hide others)
+    // 6️⃣ Focus map on the radius area (without hiding anything)
     if (insideCount > 0 && !bounds.isEmpty()) {
       setTimeout(() => {
         map.fitBounds(bounds);
@@ -381,8 +388,35 @@ function filterByRadius(center, radiusKm = 50) {
       map.setZoom(11);
     }
   
-    console.log(`🧭 Highlighting ${insideCount} markers within ${radiusKm} km radius`);
+    // 7️⃣ Ensure clusters are rebuilt with yellow style
+    if (clusterer) clusterer.clearMarkers();
+    clusterer = new markerClusterer.MarkerClusterer({
+      map,
+      markers,
+      renderer: {
+        render: ({ count, position }) => {
+          const color = "#fc0";
+          const size = 40 + Math.log(count) * 8;
+          const svg =
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">' +
+            `<circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>` +
+            `<text x="50%" y="50%" dy="0.35em" text-anchor="middle" fill="#000" font-family="sans-serif" font-size="18">${count}</text>` +
+            "</svg>";
+          return new google.maps.Marker({
+            position,
+            icon: {
+              url: "data:image/svg+xml;base64," + window.btoa(svg),
+              scaledSize: new google.maps.Size(size, size),
+            },
+            zIndex: google.maps.Marker.MAX_ZINDEX + count,
+          });
+        },
+      },
+    });
+  
+    console.log(`🧭 Focused on ${insideCount} markers within ${radiusKm} km (no hiding)`);
   }
+  
   
   
 function resetRadiusFilter() {
