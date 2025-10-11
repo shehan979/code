@@ -406,3 +406,4 @@ const cmsMapFilterReady = setInterval(() => {
     initLiveCMSFilterOnMapMove();
   }
 }, 800);
+
