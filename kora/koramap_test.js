@@ -1,4 +1,4 @@
-console.log("🟡 Map script started — waiting for all CMS items.");
+console.log("🟡 Map script started — waiting for all CMS items....");
 
 let map, clusterer;
 let markers = [];
