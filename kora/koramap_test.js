@@ -407,3 +407,51 @@ const cmsMapFilterReady = setInterval(() => {
   }
 }, 800);
 
+/* ============================================================
+   🔁 Reset Filter Button Logic
+============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("searchmap");
+  const resetBtn = document.getElementById("resetfilter");
+
+  if (!input || !resetBtn) return;
+
+  // --- Initialize hidden ---
+  resetBtn.style.display = "none";
+
+  // --- Show button when user types or selects a search ---
+  input.addEventListener("input", () => {
+    if (input.value.trim() !== "") {
+      resetBtn.style.display = "flex";
+    } else {
+      resetBtn.style.display = "none";
+    }
+  });
+
+  // --- Also show after selecting autocomplete place ---
+  if (window.google?.maps?.places) {
+    const autocomplete = new google.maps.places.Autocomplete(input);
+    autocomplete.addListener("place_changed", () => {
+      if (input.value.trim() !== "") resetBtn.style.display = "flex";
+    });
+  }
+
+  // --- Click to reset everything ---
+  resetBtn.addEventListener("click", () => {
+    console.log("🔁 Reset button clicked — restoring default map and live filter");
+
+    // 1️⃣ Clear input
+    input.value = "";
+
+    // 2️⃣ Hide reset icon
+    resetBtn.style.display = "none";
+
+    // 3️⃣ Reset map view + show all items
+    resetRadiusFilter();
+
+    // 4️⃣ Restart live CMS bound filtering
+    if (typeof initLiveCMSFilterOnMapMove === "function") {
+      initLiveCMSFilterOnMapMove();
+    }
+  });
+});
