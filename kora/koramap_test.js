@@ -330,45 +330,76 @@ const readyCheck = setInterval(() => {
   }
 }, 1000);
 
+
+
+
 /* ============================================================
-   🧭 Dynamic CMS Filter on Map Move / Zoom
+   🧭 Fixed: CMS Filter on Map Move / Zoom
+   → Updates CMS list to show only items inside visible map area
 ============================================================ */
 function initMapViewFilter() {
   if (!map || !markers.length) return setTimeout(initMapViewFilter, 1000);
 
-  function isMarkerInView(marker) {
+  console.log("🧭 Map view-based CMS filter active…");
+
+  // Helper: wait for map bounds to be ready
+  function getMapBoundsSafe() {
     const bounds = map.getBounds();
-    return bounds ? bounds.contains(marker.getPosition()) : false;
+    if (!bounds) {
+      console.warn("⚠️ Map bounds not ready yet — retrying...");
+      return null;
+    }
+    return bounds;
   }
 
+  // Core function: show only CMS items visible on map
   function filterVisibleCMSItems() {
     const input = document.getElementById("searchmap");
-    // 🚫 Skip filtering if user has active search text
-    if (input && input.value.trim() !== "") return;
+    if (input && input.value.trim() !== "") return; // 🚫 Skip if search active
 
-    if (input) input.value = ""; // Clear any residual text
-    const bounds = map.getBounds();
-    if (!bounds) return;
+    const bounds = getMapBoundsSafe();
+    if (!bounds) return; // prevent null errors
+
     let visibleCount = 0;
-    document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
+
+    // Use marker positions directly — independent of CMS item order
+    markers.forEach((marker) => {
+      const position = marker.getPosition();
+      const inView = bounds.contains(position);
+
+      // Find CMS element linked to this marker (by lat/lng match)
+      const lat = marker.position.lat();
+      const lng = marker.position.lng();
+      const el = Array.from(document.querySelectorAll(".map-loc-item[data-lat][data-lng]")).find(
+        (item) =>
+          Math.abs(parseFloat(item.dataset.lat) - lat) < 0.0001 &&
+          Math.abs(parseFloat(item.dataset.lng) - lng) < 0.0001
+      );
+      if (!el) return;
+
       const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
       if (!cmsItem) return;
-      const marker = markers[i];
-      if (!marker || !marker.getMap()) return;
-      if (isMarkerInView(marker)) {
+
+      if (inView) {
         cmsItem.style.display = "block";
         visibleCount++;
       } else {
         cmsItem.style.display = "none";
       }
     });
-    console.log(`🧩 Map view filter applied — ${visibleCount} items visible`);
+
+    console.log(`🧩 CMS list filtered: ${visibleCount} items visible on map`);
   }
 
-  map.addListener("idle", () => filterVisibleCMSItems());
-  console.log("✅ Map view-based CMS filtering initialized");
+  // --- Run filter after each zoom or drag ---
+  map.addListener("idle", () => {
+    setTimeout(filterVisibleCMSItems, 300); // small delay ensures bounds ready
+  });
+
+  console.log("✅ Map view-based CMS filtering initialized (stable)");
 }
 
+// --- Wait for map fully initialized ---
 const mapFilterCheck = setInterval(() => {
   if (mapFullyInitialized && markers.length > 0 && map) {
     clearInterval(mapFilterCheck);
