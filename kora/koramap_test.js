@@ -252,9 +252,24 @@ function initLocationSearch() {
   autocomplete.addListener("place_changed", () => {
     const place = autocomplete.getPlace();
     if (!place.geometry) return;
-    const center = place.geometry.location;
+  
+    // --- Handle both precise and regional results ---
+    if (place.geometry.viewport) {
+      map.fitBounds(place.geometry.viewport); // Fit to the full region (e.g., city)
+    } else if (place.geometry.location) {
+      map.setCenter(place.geometry.location);
+      map.setZoom(11); // Default zoom if no viewport available
+    }
+  
+    // --- Always trigger your radius filter after focusing ---
+    const center = place.geometry.location || map.getCenter();
     filterByRadius(center, 50);
+  
+    // --- Show reset button ---
+    const resetBtn = document.getElementById("resetfilter");
+    if (resetBtn) resetBtn.style.display = "flex";
   });
+  
   input.addEventListener("input", () => {
     if (input.value.trim() === "") resetRadiusFilter();
   });
