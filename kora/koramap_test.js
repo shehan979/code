@@ -45,6 +45,7 @@ function loadMapMarkers() {
     return;
   }
 
+  // Clear previous state
   markers.forEach((m) => m.setMap(null));
   markers = [];
   infoWindows.forEach((i) => i.close());
@@ -104,6 +105,7 @@ function loadMapMarkers() {
             </div>
           </div>
         </div>
+
         <div class="location-details border">
           <div class="retailer-name_wrap"><p class="loc-name bold">${name}</p></div>
           <p class="loc-location">${address}</p>
@@ -129,6 +131,7 @@ function loadMapMarkers() {
     bounds.extend(pos);
   });
 
+  // --- Cluster styling ---
   if (clusterer) clusterer.clearMarkers();
   clusterer = new markerClusterer.MarkerClusterer({
     map,
@@ -161,8 +164,7 @@ function loadMapMarkers() {
 function waitForAllCMSItems() {
   const loadingEl = document.querySelector(".map_loading_screen");
   if (loadingEl) loadingEl.style.display = "flex";
-  let attempts = 0,
-    maxAttempts = 10;
+  let attempts = 0, maxAttempts = 10;
 
   const check = setInterval(() => {
     if (mapFullyInitialized) return clearInterval(check);
@@ -184,41 +186,7 @@ function waitForAllCMSItems() {
 }
 
 /* ============================================================
-   📏 Sort CMS Items by Distance
-============================================================ */
-function sortCMSItemsByDistance(center) {
-  const items = Array.from(document.querySelectorAll(".map-loc-item[data-lat][data-lng]"));
-  if (!items.length) return;
-
-  const distances = [];
-
-  items.forEach((el) => {
-    const lat = parseFloat(el.dataset.lat);
-    const lng = parseFloat(el.dataset.lng);
-    const wrapper = el.closest(".w-dyn-item");
-    if (!wrapper || isNaN(lat) || isNaN(lng) || wrapper.style.display === "none") return;
-
-    const pos = new google.maps.LatLng(lat, lng);
-    const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos) / 1000;
-    distances.push({ el: wrapper, distance });
-  });
-
-  distances.sort((a, b) => a.distance - b.distance);
-
-  const cmsList = document.querySelector('[fs-list-load="all"], [role="list"], .w-dyn-items');
-  if (cmsList) {
-    distances.forEach(({ el, distance }) => {
-      const distanceField = el.querySelector("#distance-filter-value-set");
-      if (distanceField) distanceField.textContent = `${distance.toFixed(1)} km`;
-      cmsList.appendChild(el);
-    });
-  }
-
-  console.log(`📏 Sorted ${distances.length} CMS items by nearest distance`);
-}
-
-/* ============================================================
-   🎯 Filter by Radius
+   🎯 Filter by Radius + Sort by Distance
 ============================================================ */
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
@@ -227,12 +195,12 @@ function filterByRadius(center, radiusKm = 50) {
 
   const radiusM = radiusKm * 1000;
   const bounds = new google.maps.LatLngBounds();
-  let visibleCount = 0;
+  const distances = [];
 
   document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
     const lat = parseFloat(el.dataset.lat);
     const lng = parseFloat(el.dataset.lng);
-    const cmsItem = el.closest(".w-dyn-item");
+    const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
     if (!cmsItem || isNaN(lat) || isNaN(lng)) return;
 
     const pos = new google.maps.LatLng(lat, lng);
@@ -242,19 +210,27 @@ function filterByRadius(center, radiusKm = 50) {
       cmsItem.style.display = "block";
       markers[i].setMap(map);
       bounds.extend(pos);
-      visibleCount++;
+      distances.push({ el: cmsItem, distance: distance / 1000 });
     } else {
       cmsItem.style.display = "none";
       markers[i].setMap(null);
     }
   });
 
-  if (visibleCount > 0 && !bounds.isEmpty()) {
-    map.fitBounds(bounds);
-    sortCMSItemsByDistance(center);
+  // --- Sort CMS items by distance ---
+  distances.sort((a, b) => a.distance - b.distance);
+  const cmsList = document.querySelector('[fs-list-load="all"], [role="list"], .w-dyn-items');
+  if (cmsList) {
+    distances.forEach(({ el, distance }) => {
+      const distanceField = el.querySelector("#distance-filter-value-set");
+      if (distanceField) distanceField.textContent = `${distance.toFixed(1)} km`;
+      cmsList.appendChild(el);
+    });
   }
 
-  console.log(`🧭 Showing ${visibleCount} CMS items within ${radiusKm} km radius (sorted)`);
+  if (distances.length > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
+
+  console.log(`🧭 Showing ${distances.length} CMS items within ${radiusKm} km radius (sorted)`);
 }
 
 /* ============================================================
