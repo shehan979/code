@@ -5,7 +5,6 @@ let markers = [];
 let infoWindows = [];
 let mapReady = false;
 let mapFullyInitialized = false;
-
 // --- Initialize Google Map ---
 function initMap() {
   console.log("🧩 Google Maps API ready — initializing map");
