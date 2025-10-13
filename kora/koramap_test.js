@@ -174,13 +174,11 @@ function waitForAllCMSItems() {
       loadMapMarkers();
       if (loadingEl) loadingEl.style.display = "none";
       mapFullyInitialized = true;
-      rebindOnCMSLoad(false);
     } else if (attempts >= maxAttempts) {
       clearInterval(check);
       loadMapMarkers();
       if (loadingEl) loadingEl.style.display = "none";
       mapFullyInitialized = true;
-      rebindOnCMSLoad(false);
     }
   }, 1000);
 }
@@ -210,7 +208,8 @@ function sortCMSItemsByDistance(center) {
   const cmsList = document.querySelector('[fs-list-load="all"], [role="list"], .w-dyn-items');
   if (cmsList) {
     distances.forEach(({ el, distance }) => {
-      el.querySelector("#distance-filter-value-set")?.textContent = `${distance.toFixed(1)} km`;
+      const distanceField = el.querySelector("#distance-filter-value-set");
+      if (distanceField) distanceField.textContent = `${distance.toFixed(1)} km`;
       cmsList.appendChild(el);
     });
   }
