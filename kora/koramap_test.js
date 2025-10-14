@@ -334,15 +334,27 @@ function filterByRadius(center, radiusKm = 50) {
   const listParent = visibleItems[0]?.el.parentElement;
   if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
 
-  // ✅ Fit bounds + limit zoom-out to ~100 km view
-  if (visibleItems.length > 0 && !bounds.isEmpty()) {
-    map.fitBounds(bounds);
-    setTimeout(() => {
-      const currentZoom = map.getZoom();
-      const minZoom = 8; // ≈100 km
-      if (currentZoom < minZoom) map.setZoom(minZoom);
-    }, 600);
-  }
+ // ✅ Fit bounds + limit zoom range between 50 km – 100 km
+if (visibleItems.length > 0 && !bounds.isEmpty()) {
+  map.fitBounds(bounds);
+
+  setTimeout(() => {
+    const currentZoom = map.getZoom();
+
+    // Map zoom levels are roughly: 7 ≈ 200 km, 8 ≈ 100 km, 9 ≈ 50 km
+    const minZoom = 8; // ≈ 100 km (max zoom-out)
+    const maxZoom = 9; // ≈ 50 km (max zoom-in from initial)
+
+    // Apply limits
+    map.setOptions({ minZoom, maxZoom });
+
+    // Adjust initial zoom if outside range
+    if (currentZoom < minZoom) map.setZoom(minZoom);
+    if (currentZoom > maxZoom) map.setZoom(maxZoom);
+
+    console.log(`🔒 Zoom range restricted: ${maxZoom} (≈50 km) → ${minZoom} (≈100 km)`);
+  }, 600);
+}
 
   console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (sorted by distance)`);
 }
