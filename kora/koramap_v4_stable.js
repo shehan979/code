@@ -282,7 +282,6 @@ function filterByRadius(center, radiusKm = 50) {
   infoWindows = [];
 
   const radiusM = radiusKm * 1000;
-  const maxVisibleRadiusM = 100 * 1000; // 🔒 Max map canvas radius = 100 km
   const bounds = new google.maps.LatLngBounds();
   let visibleItems = [];
 
@@ -323,22 +322,9 @@ function filterByRadius(center, radiusKm = 50) {
   const listParent = visibleItems[0]?.el.parentElement;
   if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
 
-  // ✅ Fit bounds but limit zoom-out to roughly 100 km area
-  if (visibleItems.length > 0 && !bounds.isEmpty()) {
-    map.fitBounds(bounds);
-
-    // Wait a tick for bounds to settle, then clamp zoom level
-    google.maps.event.addListenerOnce(map, "idle", () => {
-      const currentZoom = map.getZoom();
-      // Higher number = closer, lower number = farther (e.g., 8 ≈ 100 km)
-      const minAllowedZoom = 8;
-      if (currentZoom < minAllowedZoom) map.setZoom(minAllowedZoom);
-    });
-  }
-
-  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km (max canvas 100 km, sorted by distance)`);
+  if (visibleItems.length > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
+  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (sorted by distance)`);
 }
-
 
 // --- Reset map ---
 function resetRadiusFilter() {

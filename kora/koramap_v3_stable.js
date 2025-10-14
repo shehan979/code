@@ -280,81 +280,36 @@ function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
-
   const radiusM = radiusKm * 1000;
-  const maxVisibleRadiusM = 100 * 1000; // 🔒 Max map canvas radius = 100 km
   const bounds = new google.maps.LatLngBounds();
-  let visibleItems = [];
-
+  let visibleCount = 0;
   document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
     const lat = parseFloat(el.dataset.lat);
     const lng = parseFloat(el.dataset.lng);
     const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
     if (!cmsItem || isNaN(lat) || isNaN(lng)) return;
-
     const pos = new google.maps.LatLng(lat, lng);
     const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
-    const distanceKm = (distance / 1000).toFixed(1);
-
-    // ✅ Add / update distance paragraph
-    let distEl = cmsItem.querySelector(".distance-display");
-    if (!distEl) {
-      distEl = document.createElement("p");
-      distEl.classList.add("distance-display");
-      cmsItem.querySelector(".retailer-name_wrap")?.appendChild(distEl);
-    }
-    distEl.textContent = distanceKm + " km";
-    distEl.style.display = "block";
-
-    // ✅ Show / hide based on radius
     if (distance <= radiusM) {
       cmsItem.style.display = "block";
       markers[i].setMap(map);
       bounds.extend(pos);
-      visibleItems.push({ el: cmsItem, distance: distance });
+      visibleCount++;
     } else {
       cmsItem.style.display = "none";
       markers[i].setMap(null);
     }
   });
-
-  // ✅ Sort visible items by distance
-  visibleItems.sort((a, b) => a.distance - b.distance);
-  const listParent = visibleItems[0]?.el.parentElement;
-  if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
-
-  // ✅ Fit bounds but limit zoom-out to roughly 100 km area
-  if (visibleItems.length > 0 && !bounds.isEmpty()) {
-    map.fitBounds(bounds);
-
-    // Wait a tick for bounds to settle, then clamp zoom level
-    google.maps.event.addListenerOnce(map, "idle", () => {
-      const currentZoom = map.getZoom();
-      // Higher number = closer, lower number = farther (e.g., 8 ≈ 100 km)
-      const minAllowedZoom = 8;
-      if (currentZoom < minAllowedZoom) map.setZoom(minAllowedZoom);
-    });
-  }
-
-  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km (max canvas 100 km, sorted by distance)`);
+  if (visibleCount > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
+  console.log(`🧭 Showing ${visibleCount} CMS items within ${radiusKm} km radius`);
 }
-
 
 // --- Reset map ---
 function resetRadiusFilter() {
-  document.querySelectorAll(".w-dyn-item").forEach((el) => {
-    el.style.display = "block";
-    const distEl = el.querySelector(".distance-display");
-    if (distEl) {
-      distEl.textContent = "";
-      distEl.style.display = "none";
-    }
-  });
-
+  document.querySelectorAll(".w-dyn-item").forEach((el) => (el.style.display = "block"));
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
   markers.forEach((m) => m.setMap(map));
-
   if (clusterer) clusterer.clearMarkers();
   clusterer = new markerClusterer.MarkerClusterer({
     map,
@@ -374,13 +329,11 @@ function resetRadiusFilter() {
       },
     },
   });
-
   const bounds = new google.maps.LatLngBounds();
   markers.forEach((m) => { if (m.getMap()) bounds.extend(m.getPosition()); });
   if (!bounds.isEmpty()) map.fitBounds(bounds);
   else { map.setCenter({ lat: 51.1, lng: 13.7 }); map.setZoom(7); }
-
-  console.log("🔁 Radius filter reset + distances cleared + clusters restored");
+  console.log("🔁 Radius filter reset + map refitted + clusters recolored");
 }
 
 // --- Initialize search once map ready ---
