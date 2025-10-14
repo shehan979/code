@@ -364,7 +364,6 @@ function filterByRadius(center, radiusKm = 50) {
   console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius`);
 }
 
-
 // --- Reset map ---
 function resetRadiusFilter() {
   document.querySelectorAll(".w-dyn-item").forEach((el) => {
