@@ -5,7 +5,6 @@ let markers = [];
 let infoWindows = [];
 let mapReady = false;
 let mapFullyInitialized = false;
-
 // --- Initialize Google Map ---
 function initMap() {
   console.log("🧩 Google Maps API ready — initializing map");
@@ -160,7 +159,7 @@ function loadMapMarkers() {
 function waitForAllCMSItems() {
   const loadingEl = document.querySelector(".map_loading_screen");
   if (loadingEl) loadingEl.style.display = "flex";
-  let attempts = 0, maxAttempts = 10;
+  let attempts = 0, maxAttempts = 5;
 
   const check = setInterval(() => {
     if (mapFullyInitialized) return clearInterval(check);
