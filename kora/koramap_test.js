@@ -352,7 +352,7 @@ if (visibleItems.length > 0 && !bounds.isEmpty()) {
     if (currentZoom < minZoom) map.setZoom(minZoom);
     if (currentZoom > maxZoom) map.setZoom(maxZoom);
 
-    console.log(`🔒 Zoom range restricted: ${maxZoom} (≈50 km) → ${minZoom} (≈100 km)`);
+    console.log(`🔒 Zoom range restricted: ${maxZoom} (≈0.8 km) → ${minZoom} (≈100 km)`);
   }, 600);
 }
 
