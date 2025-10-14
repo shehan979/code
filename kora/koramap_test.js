@@ -1,4 +1,4 @@
-console.log("🟡 Map script started  waiting for all CMS items..");
+console.log("🟡 Map script started — waiting for all CMS items..");
 
 let map, clusterer;
 let markers = [];
@@ -6,9 +6,11 @@ let infoWindows = [];
 let mapReady = false;
 let mapFullyInitialized = false;
 
-// --- Initialize Google Map ---
+/* ============================================================
+   🗺️ Initialize Google Map
+============================================================ */
 function initMap() {
-  console.log("🧩 Google Maps API ready — initializing map");
+  console.log("🧩 Google Maps API ready — initializing map...");
   const mapEl = document.getElementById("map_canvas");
   if (!mapEl) {
     console.error("❌ Map canvas not found!");
@@ -29,18 +31,64 @@ function initMap() {
   waitForAllCMSItems();
 }
 
-// --- Build markers from CMS items ---
+/* ============================================================
+   ⏳ Wait for CMS items (improved logic)
+============================================================ */
+function waitForAllCMSItems() {
+  console.log("⏳ Checking CMS items + Finsweet Attributes...");
+  const loadingEl = document.querySelector(".map_loading_screen");
+  if (loadingEl) loadingEl.style.display = "flex";
+
+  let attempts = 0;
+  const maxAttempts = 15;
+
+  const check = setInterval(() => {
+    attempts++;
+    const items = document.querySelectorAll(".map-loc-item[data-lat][data-lng]");
+    const fsV1 = window.fsAttributes?.cms && window.fsAttributes.cms.listInstances.length > 0;
+    const fsV2 = document.querySelectorAll("[fs-list-element='list']").length > 0;
+
+    console.log(`🔍 CMS check #${attempts}: ${items.length} items | Finsweet v1: ${!!fsV1} | v2: ${!!fsV2}`);
+
+    if (items.length > 0 && (fsV1 || fsV2)) {
+      clearInterval(check);
+      console.log("✅ CMS fully loaded — initializing markers...");
+      if (loadingEl) loadingEl.style.display = "none";
+      loadMapMarkers();
+      mapFullyInitialized = true;
+      bindCMSMarkerClicks();
+      initLocationSearch();
+    } else if (attempts >= maxAttempts) {
+      clearInterval(check);
+      console.warn("⚠️ CMS not detected after timeout — forcing map load fallback.");
+      if (loadingEl) loadingEl.style.display = "none";
+      loadMapMarkers();
+      mapFullyInitialized = true;
+      bindCMSMarkerClicks();
+      initLocationSearch();
+    }
+  }, 1000);
+}
+
+/* ============================================================
+   📍 Build Markers
+============================================================ */
 function loadMapMarkers() {
-  if (!mapReady) return;
+  if (!mapReady) {
+    console.warn("⚠️ Map not ready yet — retrying...");
+    return setTimeout(loadMapMarkers, 1000);
+  }
+
   const items = document.querySelectorAll(".map-loc-item[data-lat][data-lng]");
-  console.log("✅ Found " + items.length + " .map-loc-item elements");
+  console.log("✅ Found " + items.length + " CMS location items");
 
   if (!items.length) {
-    console.warn("⚠️ No CMS map items yet — retrying...");
+    console.warn("⚠️ No CMS map items yet — waiting...");
     setTimeout(loadMapMarkers, 1000);
     return;
   }
 
+  // clear
   markers.forEach((m) => m.setMap(null));
   markers = [];
   infoWindows.forEach((i) => i.close());
@@ -54,15 +102,7 @@ function loadMapMarkers() {
     if (isNaN(lat) || isNaN(lng)) return;
 
     const name = el.dataset.name || "Unnamed";
-    const address = el.dataset.location || "";
-    const zip = el.dataset.zip || "";
-    const phone = el.dataset.phone || "";
-    const email = el.dataset.email || "";
-    const website = el.dataset.websitelink || "";
-    const logo = el.dataset.logo || "";
-    const slug = el.closest("[data-slug]") ? el.closest("[data-slug]").dataset.slug : "";
     const pos = { lat: lat, lng: lng };
-
     const svgMarker = {
       path: "M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7zm0 9.5c-1.39 0-2.5-1.12-2.5-2.5S10.61 6.5 12 6.5s2.5 1.12 2.5 2.5S13.39 11.5 12 11.5z",
       fillColor: "#fc0",
@@ -80,47 +120,10 @@ function loadMapMarkers() {
       icon: svgMarker,
     });
 
-    const infoHTML =
-      '<div class="location-popup no-border">' +
-      '<div class="top-div">' +
-      '<div class="name-box">' +
-      '<a id="' + slug + '" href="#" class="map-icon-border w-inline-block">' +
-      (logo
-        ? '<img src="' + logo + '" loading="lazy" alt="' + name + '" class="home-icon">'
-        : '<img src="https://cdn.prod.website-files.com/68638096a024554ba98ce8f3/68638096a024554ba98ce9cc_2%20PT.svg" loading="lazy" alt="' + name + '" class="home-icon w-condition-invisible">') +
-      "</a></div>" +
-      '<div class="share-wrap"><div class="w-embed">' +
-      '<a href="https://www.google.com/maps/?q=' + lat + ',' + lng + '" target="_blank" class="map-icon-border circle w-inline-block">' +
-      '<img src="https://cdn.prod.website-files.com/666d832bd0a2e3aee5032c0c/67b303e181a0730606c79b91_g216.svg" loading="lazy" alt="" class="home-icon _2">' +
-      "</a></div></div></div>" +
-      '<div class="location-details border">' +
-      '<div class="retailer-name_wrap">' +
-      '<p class="loc-name bold">' + name + "</p>" +
-      '<p class="distance-display" style="display:none;"></p>' +
-      "</div>" +
-      '<p class="loc-location">' + address + "</p>" +
-      '<p class="loc-location _2">' + zip + "</p>" +
-      (phone ? '<a href="tel:' + phone + '" class="loc-phone">' + phone + "</a>" : "") +
-      (email ? '<a href="mailto:' + email + '" class="loc-email">' + email + "</a>" : "") +
-      (website
-        ? '<a href="' + website + '" target="_blank" class="loc-web">' + website.replace(/^https?:\/\//, "") + "</a>"
-        : "") +
-      "</div></div>";
-
-    const infowindow = new google.maps.InfoWindow({ content: infoHTML });
-    marker.addListener("click", function () {
-      infoWindows.forEach((iw) => iw.close());
-      infowindow.open(map, marker);
-      infoWindows.push(infowindow);
-      const targetItem = document.getElementById(slug);
-      if (targetItem) targetItem.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-
     markers.push(marker);
     bounds.extend(pos);
   });
 
-  // --- Cluster styling ---
   if (clusterer) clusterer.clearMarkers();
   clusterer = new markerClusterer.MarkerClusterer({
     map: map,
@@ -147,32 +150,34 @@ function loadMapMarkers() {
   });
 
   if (!bounds.isEmpty()) map.fitBounds(bounds);
-  console.log("🟢 Map ready with " + markers.length + " markers");
-  mapFullyInitialized = true;
+  console.log("🟢 Map initialized with " + markers.length + " markers");
 }
 
 /* ============================================================
-   📍 Radius Filter with Distance Display
+   🧭 Radius Filter (distance shown)
 ============================================================ */
-function filterByRadius(center, radiusKm) {
+function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
-  const radiusM = (radiusKm || 50) * 1000;
+  const radiusM = radiusKm * 1000;
   const bounds = new google.maps.LatLngBounds();
   let visible = 0;
+
   document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach(function (el, i) {
     const lat = parseFloat(el.dataset.lat);
     const lng = parseFloat(el.dataset.lng);
     const wrap = el.closest(".w-dyn-item");
     if (!wrap || isNaN(lat) || isNaN(lng)) return;
+
     const pos = new google.maps.LatLng(lat, lng);
     const dist = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
     const km = (dist / 1000).toFixed(1);
-    el.dataset.distance = km;
+
     const p = wrap.querySelector(".distance-display");
     if (p) {
       p.textContent = km + " km";
       p.style.display = "block";
     }
+
     if (dist <= radiusM) {
       wrap.style.display = "block";
       markers[i].setMap(map);
@@ -183,15 +188,16 @@ function filterByRadius(center, radiusKm) {
       markers[i].setMap(null);
     }
   });
+
   if (visible > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
-  console.log("🧭 Showing " + visible + " CMS items within " + radiusKm + " km radius");
+  console.log("🧭 Showing " + visible + " CMS items within " + radiusKm + " km");
 }
 
 /* ============================================================
-   🔁 Reset Filter (clears distance text)
+   🔁 Reset
 ============================================================ */
 function resetRadiusFilter() {
-  document.querySelectorAll(".w-dyn-item").forEach(function (el) {
+  document.querySelectorAll(".w-dyn-item").forEach((el) => {
     el.style.display = "block";
     const d = el.querySelector(".distance-display");
     if (d) {
@@ -199,8 +205,57 @@ function resetRadiusFilter() {
       d.style.display = "none";
     }
   });
-  if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
-  infoWindows = [];
   markers.forEach((m) => m.setMap(map));
-  console.log("🔁 Reset done — all items visible");
+  console.log("🔁 Reset — all markers visible again");
 }
+
+/* ============================================================
+   📍 Location Search
+============================================================ */
+function initLocationSearch() {
+  const input = document.getElementById("searchmap");
+  if (!input || !google.maps.places) return setTimeout(initLocationSearch, 1000);
+
+  const autocomplete = new google.maps.places.Autocomplete(input, {
+    fields: ["geometry", "formatted_address"],
+    types: ["(regions)"],
+    componentRestrictions: { country: "de" },
+  });
+
+  autocomplete.addListener("place_changed", function () {
+    const place = autocomplete.getPlace();
+    if (!place.geometry) return;
+    if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
+    else if (place.geometry.location) {
+      map.setCenter(place.geometry.location);
+      map.setZoom(11);
+    }
+
+    const center = place.geometry.location || map.getCenter();
+    filterByRadius(center, 50);
+
+    const resetBtn = document.getElementById("resetfilter");
+    if (resetBtn) resetBtn.style.display = "flex";
+  });
+
+  input.addEventListener("input", function () {
+    if (input.value.trim() === "") resetRadiusFilter();
+  });
+  console.log("✅ Location search initialized");
+}
+
+/* ============================================================
+   🪄 Start when API ready
+============================================================ */
+window.addEventListener("load", function () {
+  if (window.google && window.google.maps) {
+    initMap();
+  } else {
+    const checker = setInterval(() => {
+      if (window.google && window.google.maps) {
+        clearInterval(checker);
+        initMap();
+      }
+    }, 500);
+  }
+});
