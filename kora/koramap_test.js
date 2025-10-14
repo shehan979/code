@@ -41,7 +41,6 @@ function loadMapMarkers() {
     return;
   }
 
-  // Clear previous state
   markers.forEach((m) => m.setMap(null));
   markers = [];
   infoWindows.forEach((i) => i.close());
@@ -64,7 +63,6 @@ function loadMapMarkers() {
     const slug = el.closest("[data-slug]")?.dataset.slug || "";
     const pos = { lat, lng };
 
-    // --- Custom yellow drop-pin marker ---
     const svgMarker = {
       path: "M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7zm0 9.5c-1.39 0-2.5-1.12-2.5-2.5S10.61 6.5 12 6.5s2.5 1.12 2.5 2.5S13.39 11.5 12 11.5z",
       fillColor: "#fc0",
@@ -82,7 +80,6 @@ function loadMapMarkers() {
       icon: svgMarker,
     });
 
-    // --- Webflow-styled popup ---
     const infoHTML = `
       <div class="location-popup no-border">
         <div class="top-div">
@@ -119,7 +116,6 @@ function loadMapMarkers() {
     `;
 
     const infowindow = new google.maps.InfoWindow({ content: infoHTML });
-
     marker.addListener("click", () => {
       infoWindows.forEach((iw) => iw.close());
       infowindow.open(map, marker);
@@ -132,7 +128,6 @@ function loadMapMarkers() {
     bounds.extend(pos);
   });
 
-  // --- Cluster styling ---
   if (clusterer) clusterer.clearMarkers();
   clusterer = new markerClusterer.MarkerClusterer({
     map,
@@ -187,7 +182,7 @@ function waitForAllCMSItems() {
   }, 1000);
 }
 
-// --- Filter by radius (UPDATED) ---
+// --- Filter by radius (distance + cluster style) ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
@@ -206,10 +201,10 @@ function filterByRadius(center, radiusKm = 50) {
     const km = (distance / 1000).toFixed(1);
     el.dataset.distance = km;
 
-    const distanceText = cmsItem.querySelector(".distance-display");
-    if (distanceText) {
-      distanceText.textContent = `${km} km`;
-      distanceText.style.display = "block";
+    const distEl = cmsItem.querySelector(".distance-display");
+    if (distEl) {
+      distEl.textContent = `${km} km`;
+      distEl.style.display = "block";
     }
 
     if (distance <= radiusM) {
@@ -227,14 +222,14 @@ function filterByRadius(center, radiusKm = 50) {
   console.log(`🧭 Showing ${visibleCount} CMS items within ${radiusKm} km radius`);
 }
 
-// --- Reset map (UPDATED) ---
+// --- Reset map (fixed original cluster style + hide distances) ---
 function resetRadiusFilter() {
   document.querySelectorAll(".w-dyn-item").forEach((el) => {
     el.style.display = "block";
-    const distanceText = el.querySelector(".distance-display");
-    if (distanceText) {
-      distanceText.textContent = "";
-      distanceText.style.display = "none";
+    const distEl = el.querySelector(".distance-display");
+    if (distEl) {
+      distEl.textContent = "";
+      distEl.style.display = "none";
     }
   });
 
@@ -249,11 +244,12 @@ function resetRadiusFilter() {
     renderer: {
       render: ({ count, position }) => {
         const color = "#fc0";
-        const size = 40 + Math.log(count) * 8;
-        const svg = window.btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
-          <circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>
-          <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
-            fill="#000" font-family="sans-serif" font-size="18">${count}</text></svg>`);
+        const size = 40 + Math.log(count) * 10;
+        const svg = window.btoa(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+            <circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>
+            <text x="50%" y="50%" dy="0.35em" text-anchor="middle" fill="#000" font-family="sans-serif" font-size="18">${count}</text>
+          </svg>`);
         return new google.maps.Marker({
           position,
           icon: { url: `data:image/svg+xml;base64,${svg}`, scaledSize: new google.maps.Size(size, size) },
@@ -273,7 +269,31 @@ function resetRadiusFilter() {
     map.setZoom(7);
   }
 
-  console.log("🔁 Radius filter reset → distances cleared & map refitted");
+  console.log("🔁 Reset done — distances hidden, cluster style restored");
 }
 
-// (Everything else below remains unchanged)
+/* ============================================================
+   🔁 Reset Filter Button Logic (restored)
+============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("searchmap");
+  const resetBtn = document.getElementById("resetfilter");
+
+  if (!input || !resetBtn) return;
+  resetBtn.style.display = "none";
+
+  input.addEventListener("input", () => {
+    if (input.value.trim() !== "") resetBtn.style.display = "flex";
+    else {
+      resetBtn.style.display = "none";
+      resetRadiusFilter();
+    }
+  });
+
+  resetBtn.addEventListener("click", () => {
+    console.log("🔁 Reset button clicked — restoring default map");
+    input.value = "";
+    resetBtn.style.display = "none";
+    resetRadiusFilter();
+  });
+});
