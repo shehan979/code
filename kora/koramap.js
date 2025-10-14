@@ -280,36 +280,67 @@ function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
+
   const radiusM = radiusKm * 1000;
   const bounds = new google.maps.LatLngBounds();
-  let visibleCount = 0;
+  let visibleItems = [];
+
   document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
     const lat = parseFloat(el.dataset.lat);
     const lng = parseFloat(el.dataset.lng);
     const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
     if (!cmsItem || isNaN(lat) || isNaN(lng)) return;
+
     const pos = new google.maps.LatLng(lat, lng);
     const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
+    const distanceKm = (distance / 1000).toFixed(1);
+
+    // ✅ Add / update distance paragraph
+    let distEl = cmsItem.querySelector(".distance-display");
+    if (!distEl) {
+      distEl = document.createElement("p");
+      distEl.classList.add("distance-display");
+      cmsItem.querySelector(".retailer-name_wrap")?.appendChild(distEl);
+    }
+    distEl.textContent = distanceKm + " km";
+    distEl.style.display = "block";
+
+    // ✅ Show / hide based on radius
     if (distance <= radiusM) {
       cmsItem.style.display = "block";
       markers[i].setMap(map);
       bounds.extend(pos);
-      visibleCount++;
+      visibleItems.push({ el: cmsItem, distance: distance });
     } else {
       cmsItem.style.display = "none";
       markers[i].setMap(null);
     }
   });
-  if (visibleCount > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
-  console.log(`🧭 Showing ${visibleCount} CMS items within ${radiusKm} km radius`);
+
+  // ✅ Sort visible items by distance
+  visibleItems.sort((a, b) => a.distance - b.distance);
+  const listParent = visibleItems[0]?.el.parentElement;
+  if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
+
+  if (visibleItems.length > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
+  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (sorted by distance)`);
 }
 
 // --- Reset map ---
 function resetRadiusFilter() {
-  document.querySelectorAll(".w-dyn-item").forEach((el) => (el.style.display = "block"));
+  document.querySelectorAll(".w-dyn-item").forEach((el) => {
+    el.style.display = "block";
+    const distEl = el.querySelector(".distance-display");
+    if (distEl) {
+      distEl.textContent = "";
+      distEl.style.display = "none";
+    }
+  });
+
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
   markers.forEach((m) => m.setMap(map));
+
   if (clusterer) clusterer.clearMarkers();
   clusterer = new markerClusterer.MarkerClusterer({
     map,
@@ -329,11 +360,13 @@ function resetRadiusFilter() {
       },
     },
   });
+
   const bounds = new google.maps.LatLngBounds();
   markers.forEach((m) => { if (m.getMap()) bounds.extend(m.getPosition()); });
   if (!bounds.isEmpty()) map.fitBounds(bounds);
   else { map.setCenter({ lat: 51.1, lng: 13.7 }); map.setZoom(7); }
-  console.log("🔁 Radius filter reset + map refitted + clusters recolored");
+
+  console.log("🔁 Radius filter reset + distances cleared + clusters restored");
 }
 
 // --- Initialize search once map ready ---
