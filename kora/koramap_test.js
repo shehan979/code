@@ -276,13 +276,14 @@ function initLocationSearch() {
 }
 
 // --- Filter by radius ---
+// --- Filter by radius ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
 
   const radiusM = radiusKm * 1000;
-  const maxVisibleRadiusM = 100 * 1000; // 🔒 Max map canvas radius = 100 km
+  const maxZoomOut = 8; // 🔒 Limit = ~100km view
   const bounds = new google.maps.LatLngBounds();
   let visibleItems = [];
 
@@ -311,7 +312,7 @@ function filterByRadius(center, radiusKm = 50) {
       cmsItem.style.display = "block";
       markers[i].setMap(map);
       bounds.extend(pos);
-      visibleItems.push({ el: cmsItem, distance: distance });
+      visibleItems.push({ el: cmsItem, distance });
     } else {
       cmsItem.style.display = "none";
       markers[i].setMap(null);
@@ -323,21 +324,23 @@ function filterByRadius(center, radiusKm = 50) {
   const listParent = visibleItems[0]?.el.parentElement;
   if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
 
-  // ✅ Fit bounds but limit zoom-out to roughly 100 km area
+  // ✅ Fit map to bounds, then enforce zoom limit
   if (visibleItems.length > 0 && !bounds.isEmpty()) {
     map.fitBounds(bounds);
 
-    // Wait a tick for bounds to settle, then clamp zoom level
-    google.maps.event.addListenerOnce(map, "idle", () => {
+    // ⏳ Wait for fitBounds animation to complete, then lock zoom if needed
+    setTimeout(() => {
       const currentZoom = map.getZoom();
-      // Higher number = closer, lower number = farther (e.g., 8 ≈ 100 km)
-      const minAllowedZoom = 8;
-      if (currentZoom < minAllowedZoom) map.setZoom(minAllowedZoom);
-    });
+      if (currentZoom < maxZoomOut) {
+        console.log(`🔒 Zoom capped at level ${maxZoomOut} (current was ${currentZoom})`);
+        map.setZoom(maxZoomOut);
+      }
+    }, 800);
   }
 
-  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km (max canvas 100 km, sorted by distance)`);
+  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (max view 100 km)`);
 }
+
 
 
 // --- Reset map ---
