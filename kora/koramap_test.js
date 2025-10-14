@@ -401,16 +401,15 @@ function resetRadiusFilter() {
   markers.forEach((m) => { if (m.getMap()) bounds.extend(m.getPosition()); });
   if (!bounds.isEmpty()) map.fitBounds(bounds);
   else { map.setCenter({ lat: 51.1, lng: 13.7 }); map.setZoom(7); }
-
-  console.log("🔁 Radius filter reset + distances cleared + clusters restored");
-}
-
-// ✅ Restore full zoom freedom after reset
-map.setOptions({
+  map.setOptions({
   minZoom: null,
   maxZoom: null
 });
 console.log("🆓 Zoom limits removed — full zoom freedom restored");
+
+  console.log("🔁 Radius filter reset + distances cleared + clusters restored");
+}
+
 
 // --- Initialize search once map ready ---
 const readyCheck = setInterval(() => {
