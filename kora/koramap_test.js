@@ -276,7 +276,7 @@ function initLocationSearch() {
 }
 
 // --- Filter by radius ---
-// --- Filter by radius (fixed: missing markers issue) ---
+// --- Filter by radius with auto-expand logic ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
@@ -329,36 +329,36 @@ function filterByRadius(center, radiusKm = 50) {
     }
   });
 
+  // ✅ If no visible items, auto-expand to 100 km
+  if (visibleItems.length === 0 && radiusKm < 100) {
+    console.warn(`⚠️ No items found within ${radiusKm} km — expanding to 100 km...`);
+    return filterByRadius(center, 100);
+  }
+
   // ✅ Sort visible items by distance
   visibleItems.sort((a, b) => a.distance - b.distance);
   const listParent = visibleItems[0]?.el.parentElement;
   if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
 
- // ✅ Fit bounds + limit zoom range between 50 km – 100 km
-if (visibleItems.length > 0 && !bounds.isEmpty()) {
-  map.fitBounds(bounds);
+  // ✅ Fit bounds + lock zoom between 0 km – 100 km view
+  if (visibleItems.length > 0 && !bounds.isEmpty()) {
+    map.fitBounds(bounds);
 
-  setTimeout(() => {
-    const currentZoom = map.getZoom();
+    setTimeout(() => {
+      const currentZoom = map.getZoom();
+      const minZoom = 8;  // ≈100 km (max zoom-out)
+      const maxZoom = 15; // ≈0.8 km (street level)
+      map.setOptions({ minZoom, maxZoom });
 
-    // Map zoom levels are roughly: 7 ≈ 200 km, 8 ≈ 100 km, 9 ≈ 50 km
-    const minZoom = 8; // ≈ 100 km (max zoom-out)
-    const maxZoom = 15; // ≈ 0.8 km (max zoom-in from initial)
+      if (currentZoom < minZoom) map.setZoom(minZoom);
+      if (currentZoom > maxZoom) map.setZoom(maxZoom);
 
-    // Apply limits
-    map.setOptions({ minZoom, maxZoom });
+      console.log(`🔒 Zoom range locked: ${maxZoom} (≈0 km) → ${minZoom} (≈100 km)`);
+    }, 600);
+  }
 
-    // Adjust initial zoom if outside range
-    if (currentZoom < minZoom) map.setZoom(minZoom);
-    if (currentZoom > maxZoom) map.setZoom(maxZoom);
-
-    console.log(`🔒 Zoom range restricted: ${maxZoom} (≈0.8 km) → ${minZoom} (≈100 km)`);
-  }, 600);
+  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius`);
 }
-
-  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (sorted by distance)`);
-}
-
 
 // --- Reset map ---
 function resetRadiusFilter() {
