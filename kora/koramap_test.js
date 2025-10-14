@@ -136,7 +136,7 @@ function loadMapMarkers() {
     renderer: {
       render: ({ count, position }) => {
         const color = "#fc0";
-        const size = 40 + Math.log(count) * 10;
+        const size = 40 + Math.log(count) * 4;
         const svg = window.btoa(`
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
             <circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>
