@@ -371,6 +371,8 @@ function resetRadiusFilter() {
     }
   });
 
+
+
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
   markers.forEach((m) => m.setMap(map));
@@ -402,6 +404,13 @@ function resetRadiusFilter() {
 
   console.log("🔁 Radius filter reset + distances cleared + clusters restored");
 }
+
+// ✅ Restore full zoom freedom after reset
+map.setOptions({
+  minZoom: null,
+  maxZoom: null
+});
+console.log("🆓 Zoom limits removed — full zoom freedom restored");
 
 // --- Initialize search once map ready ---
 const readyCheck = setInterval(() => {
