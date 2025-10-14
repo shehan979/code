@@ -276,6 +276,7 @@ function initLocationSearch() {
 }
 
 // --- Filter by radius ---
+// --- Filter by radius (fixed: missing markers issue) ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
@@ -283,13 +284,24 @@ function filterByRadius(center, radiusKm = 50) {
 
   const radiusM = radiusKm * 1000;
   const bounds = new google.maps.LatLngBounds();
-  let visibleItems = [];
+  const visibleItems = [];
 
-  document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
+  // Build quick lookup table for markers by lat+lng
+  const markerMap = new Map();
+  markers.forEach((m) => {
+    const key = `${m.getPosition().lat().toFixed(5)},${m.getPosition().lng().toFixed(5)}`;
+    markerMap.set(key, m);
+  });
+
+  document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el) => {
     const lat = parseFloat(el.dataset.lat);
     const lng = parseFloat(el.dataset.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+    const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    const marker = markerMap.get(key);
+
     const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
-    if (!cmsItem || isNaN(lat) || isNaN(lng)) return;
+    if (!cmsItem || !marker) return;
 
     const pos = new google.maps.LatLng(lat, lng);
     const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
@@ -305,15 +317,15 @@ function filterByRadius(center, radiusKm = 50) {
     distEl.textContent = distanceKm + " km";
     distEl.style.display = "block";
 
-    // ✅ Show / hide based on radius
+    // ✅ Show / hide item + marker based on distance
     if (distance <= radiusM) {
       cmsItem.style.display = "block";
-      markers[i].setMap(map);
+      marker.setMap(map);
       bounds.extend(pos);
-      visibleItems.push({ el: cmsItem, distance: distance });
+      visibleItems.push({ el: cmsItem, distance });
     } else {
       cmsItem.style.display = "none";
-      markers[i].setMap(null);
+      marker.setMap(null);
     }
   });
 
@@ -322,9 +334,31 @@ function filterByRadius(center, radiusKm = 50) {
   const listParent = visibleItems[0]?.el.parentElement;
   if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
 
-  if (visibleItems.length > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
+ // ✅ Fit bounds + limit zoom range between 50 km – 100 km
+if (visibleItems.length > 0 && !bounds.isEmpty()) {
+  map.fitBounds(bounds);
+
+  setTimeout(() => {
+    const currentZoom = map.getZoom();
+
+    // Map zoom levels are roughly: 7 ≈ 200 km, 8 ≈ 100 km, 9 ≈ 50 km
+    const minZoom = 8; // ≈ 100 km (max zoom-out)
+    const maxZoom = 15; // ≈ 0.8 km (max zoom-in from initial)
+
+    // Apply limits
+    map.setOptions({ minZoom, maxZoom });
+
+    // Adjust initial zoom if outside range
+    if (currentZoom < minZoom) map.setZoom(minZoom);
+    if (currentZoom > maxZoom) map.setZoom(maxZoom);
+
+    console.log(`🔒 Zoom range restricted: ${maxZoom} (≈0.8 km) → ${minZoom} (≈100 km)`);
+  }, 600);
+}
+
   console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (sorted by distance)`);
 }
+
 
 // --- Reset map ---
 function resetRadiusFilter() {
@@ -336,6 +370,8 @@ function resetRadiusFilter() {
       distEl.style.display = "none";
     }
   });
+
+
 
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
@@ -365,9 +401,14 @@ function resetRadiusFilter() {
   markers.forEach((m) => { if (m.getMap()) bounds.extend(m.getPosition()); });
   if (!bounds.isEmpty()) map.fitBounds(bounds);
   else { map.setCenter({ lat: 51.1, lng: 13.7 }); map.setZoom(7); }
-
-  console.log("🔁 Radius filter reset + distances cleared + clusters restored");
+  map.setOptions({
+  minZoom: null,
+  maxZoom: null
+});
+console.log("🆓 Zoom limits removed — full zoom freedom restored");
+console.log("🔁 Radius filter reset + distances cleared + clusters restored");
 }
+
 
 // --- Initialize search once map ready ---
 const readyCheck = setInterval(() => {
@@ -376,9 +417,6 @@ const readyCheck = setInterval(() => {
     initLocationSearch();
   }
 }, 1000);
-
-
-
 
 /* ============================================================
    🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync (Final)
