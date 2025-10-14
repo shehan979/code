@@ -415,12 +415,34 @@ console.log("🆓 Zoom limits removed — full zoom freedom restored");
 console.log("🔁 Radius filter reset + distances cleared + clusters restored");
 }
 
+/* ============================================================
+   ⌨️ Enter Key → Select First Autocomplete Suggestion
+============================================================ */
+function enableAutocompleteEnterSelect() {
+  const input = document.getElementById("searchmap");
+  if (!input) return;
+
+  google.maps.event.addDomListener(input, "keydown", function (e) {
+    if (e.key === "Enter") {
+      // Prevent form submission or reload
+      e.preventDefault();
+
+      // Simulate arrow down to select first suggestion
+      const simulatedDownArrow = new KeyboardEvent("keydown", { keyCode: 40 });
+      input.dispatchEvent(simulatedDownArrow);
+
+      console.log("↩️ Enter pressed — selecting first suggestion automatically");
+    }
+  });
+}
+
 
 // --- Initialize search once map ready ---
 const readyCheck = setInterval(() => {
   if (mapFullyInitialized && markers.length > 0 && window.google?.maps?.places) {
     clearInterval(readyCheck);
     initLocationSearch();
+    enableAutocompleteEnterSelect();
   }
 }, 1000);
 
