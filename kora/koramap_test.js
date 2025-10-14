@@ -276,22 +276,32 @@ function initLocationSearch() {
 }
 
 // --- Filter by radius ---
-// --- Filter by radius ---
+// --- Filter by radius (fixed: missing markers issue) ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
 
   const radiusM = radiusKm * 1000;
-  const maxZoomOut = 8; // 🔒 Limit = ~100km view
   const bounds = new google.maps.LatLngBounds();
-  let visibleItems = [];
+  const visibleItems = [];
 
-  document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el, i) => {
+  // Build quick lookup table for markers by lat+lng
+  const markerMap = new Map();
+  markers.forEach((m) => {
+    const key = `${m.getPosition().lat().toFixed(5)},${m.getPosition().lng().toFixed(5)}`;
+    markerMap.set(key, m);
+  });
+
+  document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el) => {
     const lat = parseFloat(el.dataset.lat);
     const lng = parseFloat(el.dataset.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+    const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    const marker = markerMap.get(key);
+
     const cmsItem = el.closest(".w-dyn-item") || el.closest("[role='listitem']");
-    if (!cmsItem || isNaN(lat) || isNaN(lng)) return;
+    if (!cmsItem || !marker) return;
 
     const pos = new google.maps.LatLng(lat, lng);
     const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
@@ -307,15 +317,15 @@ function filterByRadius(center, radiusKm = 50) {
     distEl.textContent = distanceKm + " km";
     distEl.style.display = "block";
 
-    // ✅ Show / hide based on radius
+    // ✅ Show / hide item + marker based on distance
     if (distance <= radiusM) {
       cmsItem.style.display = "block";
-      markers[i].setMap(map);
+      marker.setMap(map);
       bounds.extend(pos);
       visibleItems.push({ el: cmsItem, distance });
     } else {
       cmsItem.style.display = "none";
-      markers[i].setMap(null);
+      marker.setMap(null);
     }
   });
 
@@ -324,23 +334,18 @@ function filterByRadius(center, radiusKm = 50) {
   const listParent = visibleItems[0]?.el.parentElement;
   if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
 
-  // ✅ Fit map to bounds, then enforce zoom limit
+  // ✅ Fit bounds + limit zoom-out to ~100 km view
   if (visibleItems.length > 0 && !bounds.isEmpty()) {
     map.fitBounds(bounds);
-
-    // ⏳ Wait for fitBounds animation to complete, then lock zoom if needed
     setTimeout(() => {
       const currentZoom = map.getZoom();
-      if (currentZoom < maxZoomOut) {
-        console.log(`🔒 Zoom capped at level ${maxZoomOut} (current was ${currentZoom})`);
-        map.setZoom(maxZoomOut);
-      }
-    }, 800);
+      const minZoom = 8; // ≈100 km
+      if (currentZoom < minZoom) map.setZoom(minZoom);
+    }, 600);
   }
 
-  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (max view 100 km)`);
+  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (sorted by distance)`);
 }
-
 
 
 // --- Reset map ---
