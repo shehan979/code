@@ -275,8 +275,7 @@ function initLocationSearch() {
   console.log("✅ Location search initialized");
 }
 
-// --- Filter by radius ---
-// --- Filter by radius (fixed: missing markers issue) ---
+// --- Filter by radius with auto-expand + empty-state logic ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
@@ -285,6 +284,7 @@ function filterByRadius(center, radiusKm = 50) {
   const radiusM = radiusKm * 1000;
   const bounds = new google.maps.LatLngBounds();
   const visibleItems = [];
+  const emptyState = document.querySelector(".empty-state-7.w-dyn-empty");
 
   // Build quick lookup table for markers by lat+lng
   const markerMap = new Map();
@@ -329,36 +329,40 @@ function filterByRadius(center, radiusKm = 50) {
     }
   });
 
+  // ✅ If no visible items, auto-expand to 100 km
+  if (visibleItems.length === 0 && radiusKm < 100) {
+    console.warn(`⚠️ No items found within ${radiusKm} km — expanding to 100 km...`);
+    return filterByRadius(center, 100);
+  }
+
+  // ✅ If still no items after 100 km → show empty state
+  if (visibleItems.length === 0 && radiusKm >= 100) {
+    console.warn("🚫 No items found within 100 km radius — showing empty state");
+    if (emptyState) emptyState.style.display = "block";
+  } else {
+    if (emptyState) emptyState.style.display = "none";
+  }
+
   // ✅ Sort visible items by distance
   visibleItems.sort((a, b) => a.distance - b.distance);
   const listParent = visibleItems[0]?.el.parentElement;
   if (listParent) visibleItems.forEach((item) => listParent.appendChild(item.el));
 
- // ✅ Fit bounds + limit zoom range between 50 km – 100 km
-if (visibleItems.length > 0 && !bounds.isEmpty()) {
-  map.fitBounds(bounds);
+  // ✅ Fit bounds + lock zoom between 0–100 km
+  if (visibleItems.length > 0 && !bounds.isEmpty()) {
+    map.fitBounds(bounds);
+    setTimeout(() => {
+      const currentZoom = map.getZoom();
+      const minZoom = 8;  // ≈100 km (max zoom-out)
+      const maxZoom = 15; // ≈0.8 km (street level)
+      map.setOptions({ minZoom, maxZoom });
+      if (currentZoom < minZoom) map.setZoom(minZoom);
+      if (currentZoom > maxZoom) map.setZoom(maxZoom);
+    }, 600);
+  }
 
-  setTimeout(() => {
-    const currentZoom = map.getZoom();
-
-    // Map zoom levels are roughly: 7 ≈ 200 km, 8 ≈ 100 km, 9 ≈ 50 km
-    const minZoom = 8; // ≈ 100 km (max zoom-out)
-    const maxZoom = 15; // ≈ 0.8 km (max zoom-in from initial)
-
-    // Apply limits
-    map.setOptions({ minZoom, maxZoom });
-
-    // Adjust initial zoom if outside range
-    if (currentZoom < minZoom) map.setZoom(minZoom);
-    if (currentZoom > maxZoom) map.setZoom(maxZoom);
-
-    console.log(`🔒 Zoom range restricted: ${maxZoom} (≈0.8 km) → ${minZoom} (≈100 km)`);
-  }, 600);
+  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius`);
 }
-
-  console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius (sorted by distance)`);
-}
-
 
 // --- Reset map ---
 function resetRadiusFilter() {
@@ -371,7 +375,9 @@ function resetRadiusFilter() {
     }
   });
 
-
+  // ✅ Hide empty state again on reset (moved outside the loop)
+  const emptyState = document.querySelector(".empty-state-7.w-dyn-empty");
+  if (emptyState) emptyState.style.display = "none";
 
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
