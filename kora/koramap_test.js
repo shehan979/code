@@ -436,6 +436,24 @@ function enableAutocompleteEnterSelect() {
   });
 }
 
+/* ============================================================
+   🎨 Highlight First Autocomplete Suggestion
+============================================================ */
+function highlightFirstAutocompleteOption() {
+  const pacObserver = new MutationObserver(() => {
+    const pacItems = document.querySelectorAll(".pac-item");
+    if (pacItems.length > 0) {
+      // Remove highlight from all
+      pacItems.forEach((item) => item.style.backgroundColor = "");
+      // Highlight the first suggestion
+      pacItems[0].style.backgroundColor = "#fff6d6"; // light yellow
+    }
+  });
+
+  // Observe DOM changes (Google injects .pac-container dynamically)
+  pacObserver.observe(document.body, { childList: true, subtree: true });
+  console.log("🎨 Autocomplete highlight observer active");
+}
 
 // --- Initialize search once map ready ---
 const readyCheck = setInterval(() => {
@@ -443,6 +461,7 @@ const readyCheck = setInterval(() => {
     clearInterval(readyCheck);
     initLocationSearch();
     enableAutocompleteEnterSelect();
+    highlightFirstAutocompleteOption(); 
   }
 }, 1000);
 
