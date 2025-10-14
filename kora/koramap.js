@@ -427,6 +427,9 @@ const readyCheck = setInterval(() => {
 /* ============================================================
    🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync (Final)
 ============================================================ */
+/* ============================================================
+   🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync (with Empty State)
+============================================================ */
 function initLiveCMSFilterOnMapMove() {
   if (!map || !markers.length) {
     console.warn("⏳ Waiting for map and markers to be ready for live filter...");
@@ -435,7 +438,8 @@ function initLiveCMSFilterOnMapMove() {
 
   console.log("🧭 Live CMS filtering bound to map movement...");
 
-  
+  const emptyState = document.querySelector(".empty-state-7.w-dyn-empty");
+
   // === Helper: safely get map bounds ===
   function safeBounds() {
     const b = map.getBounds();
@@ -449,7 +453,8 @@ function initLiveCMSFilterOnMapMove() {
   // === Core logic: show only CMS items within current view ===
   function filterCMSByVisibleMapArea() {
     const input = document.getElementById("searchmap");
-    // 🚫 Skip when user currently has a search filter active
+
+    // 🚫 Skip when user currently has a radius search active
     if (input && input.value.trim() !== "") return;
 
     const bounds = safeBounds();
@@ -474,6 +479,15 @@ function initLiveCMSFilterOnMapMove() {
         cmsWrapper.style.display = "none";
       }
     });
+
+    // ✅ Show or hide empty state depending on visibility
+    if (emptyState) {
+      if (visibleCount === 0) {
+        emptyState.style.display = "block";
+      } else {
+        emptyState.style.display = "none";
+      }
+    }
 
     console.log(`📍 Live map filter → ${visibleCount} CMS items in view`);
   }
