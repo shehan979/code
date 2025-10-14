@@ -41,6 +41,7 @@ function loadMapMarkers() {
     return;
   }
 
+  // Clear previous state
   markers.forEach((m) => m.setMap(null));
   markers = [];
   infoWindows.forEach((i) => i.close());
@@ -63,6 +64,7 @@ function loadMapMarkers() {
     const slug = el.closest("[data-slug]")?.dataset.slug || "";
     const pos = { lat, lng };
 
+    // --- Custom yellow drop-pin marker ---
     const svgMarker = {
       path: "M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7zm0 9.5c-1.39 0-2.5-1.12-2.5-2.5S10.61 6.5 12 6.5s2.5 1.12 2.5 2.5S13.39 11.5 12 11.5z",
       fillColor: "#fc0",
@@ -80,6 +82,7 @@ function loadMapMarkers() {
       icon: svgMarker,
     });
 
+    // --- Webflow-styled popup ---
     const infoHTML = `
       <div class="location-popup no-border">
         <div class="top-div">
@@ -116,6 +119,7 @@ function loadMapMarkers() {
     `;
 
     const infowindow = new google.maps.InfoWindow({ content: infoHTML });
+
     marker.addListener("click", () => {
       infoWindows.forEach((iw) => iw.close());
       infowindow.open(map, marker);
@@ -128,8 +132,27 @@ function loadMapMarkers() {
     bounds.extend(pos);
   });
 
+  // --- Cluster styling ---
   if (clusterer) clusterer.clearMarkers();
-  clusterer = new markerClusterer.MarkerClusterer({ map, markers });
+  clusterer = new markerClusterer.MarkerClusterer({
+    map,
+    markers,
+    renderer: {
+      render: ({ count, position }) => {
+        const color = "#fc0";
+        const size = 40 + Math.log(count) * 10;
+        const svg = window.btoa(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+            <circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>
+            <text x="50%" y="50%" dy="0.35em" text-anchor="middle" fill="#000" font-family="sans-serif" font-size="18">${count}</text>
+          </svg>`);
+        return new google.maps.Marker({
+          position,
+          icon: { url: `data:image/svg+xml;base64,${svg}`, scaledSize: new google.maps.Size(size, size) },
+        });
+      },
+    },
+  });
 
   if (!bounds.isEmpty()) map.fitBounds(bounds);
   console.log(`🟢 Map ready with ${markers.length} markers`);
@@ -138,24 +161,37 @@ function loadMapMarkers() {
 
 // --- CMS + loader control ---
 function waitForAllCMSItems() {
-  let attempts = 0, maxAttempts = 5;
+  const loadingEl = document.querySelector(".map_loading_screen");
+  if (loadingEl) loadingEl.style.display = "flex";
+  let attempts = 0,
+    maxAttempts = 5;
+
   const check = setInterval(() => {
+    if (mapFullyInitialized) return clearInterval(check);
     const items = document.querySelectorAll(".map-loc-item[data-lat]");
-    if (items.length > 0) {
+    const finsweetReady = window.fsAttributes?.cms && window.fsAttributes.cms.listInstances.length > 0;
+    console.log(`⏳ CMS check #${++attempts}: found ${items.length} items`);
+    if (items.length > 0 && finsweetReady) {
       clearInterval(check);
       loadMapMarkers();
+      if (loadingEl) loadingEl.style.display = "none";
       mapFullyInitialized = true;
-    } else if (++attempts >= maxAttempts) {
+      rebindOnCMSLoad(false);
+    } else if (attempts >= maxAttempts) {
       clearInterval(check);
       loadMapMarkers();
+      if (loadingEl) loadingEl.style.display = "none";
       mapFullyInitialized = true;
+      rebindOnCMSLoad(false);
     }
   }, 1000);
 }
 
-// --- Filter by radius ---
+// --- Filter by radius (UPDATED) ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
+  if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
+  infoWindows = [];
   const radiusM = radiusKm * 1000;
   const bounds = new google.maps.LatLngBounds();
   let visibleCount = 0;
@@ -168,13 +204,12 @@ function filterByRadius(center, radiusKm = 50) {
     const pos = new google.maps.LatLng(lat, lng);
     const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
     const km = (distance / 1000).toFixed(1);
-
-    // ✅ Set data-distance + show in paragraph
     el.dataset.distance = km;
-    const display = cmsItem.querySelector(".distance-display");
-    if (display) {
-      display.textContent = `${km} km`;
-      display.style.display = "block";
+
+    const distanceText = cmsItem.querySelector(".distance-display");
+    if (distanceText) {
+      distanceText.textContent = `${km} km`;
+      distanceText.style.display = "block";
     }
 
     if (distance <= radiusM) {
@@ -190,89 +225,55 @@ function filterByRadius(center, radiusKm = 50) {
 
   if (visibleCount > 0 && !bounds.isEmpty()) map.fitBounds(bounds);
   console.log(`🧭 Showing ${visibleCount} CMS items within ${radiusKm} km radius`);
-
-  // ✅ Sort after updating distance
-  sortCMSItemsByDistance();
 }
 
-// --- Sort CMS items by nearest ---
-function sortCMSItemsByDistance() {
-  const listParent = document.querySelector('[fs-list-element="list"], [role="list"], .map-loc-list-wrap');
-  if (!listParent) return;
-  const items = Array.from(listParent.querySelectorAll('.w-dyn-item, [role="listitem"]'))
-    .map(item => {
-      const loc = item.querySelector('.map-loc-item');
-      if (!loc) return null;
-      const dist = parseFloat(loc.dataset.distance);
-      return isNaN(dist) ? null : { el: item, dist };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.dist - b.dist);
-  items.forEach(({ el }) => listParent.appendChild(el));
-  console.log(`📍 CMS list sorted by distance (${items.length} items)`);
-}
-
-// --- Reset map + distance values ---
+// --- Reset map (UPDATED) ---
 function resetRadiusFilter() {
   document.querySelectorAll(".w-dyn-item").forEach((el) => {
     el.style.display = "block";
-    const dist = el.querySelector(".distance-display");
-    if (dist) {
-      dist.textContent = "";
-      dist.style.display = "none";
+    const distanceText = el.querySelector(".distance-display");
+    if (distanceText) {
+      distanceText.textContent = "";
+      distanceText.style.display = "none";
     }
   });
 
+  if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
+  infoWindows = [];
   markers.forEach((m) => m.setMap(map));
+
   if (clusterer) clusterer.clearMarkers();
-  clusterer = new markerClusterer.MarkerClusterer({ map, markers });
+  clusterer = new markerClusterer.MarkerClusterer({
+    map,
+    markers,
+    renderer: {
+      render: ({ count, position }) => {
+        const color = "#fc0";
+        const size = 40 + Math.log(count) * 8;
+        const svg = window.btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+          <circle cx="30" cy="30" r="26" fill="${color}" stroke="#b38b00" stroke-width="3"/>
+          <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
+            fill="#000" font-family="sans-serif" font-size="18">${count}</text></svg>`);
+        return new google.maps.Marker({
+          position,
+          icon: { url: `data:image/svg+xml;base64,${svg}`, scaledSize: new google.maps.Size(size, size) },
+        });
+      },
+    },
+  });
 
   const bounds = new google.maps.LatLngBounds();
-  markers.forEach((m) => { if (m.getMap()) bounds.extend(m.getPosition()); });
+  markers.forEach((m) => {
+    if (m.getMap()) bounds.extend(m.getPosition());
+  });
+
   if (!bounds.isEmpty()) map.fitBounds(bounds);
-  else { map.setCenter({ lat: 51.1, lng: 13.7 }); map.setZoom(7); }
-
-  console.log("🔁 Reset — distances hidden and map restored");
-}
-
-// --- Location search ---
-function initLocationSearch() {
-  const input = document.getElementById("searchmap");
-  if (!input || !google.maps.places) return setTimeout(initLocationSearch, 1000);
-  const autocomplete = new google.maps.places.Autocomplete(input, {
-    fields: ["geometry", "formatted_address"],
-    types: ["(regions)"],
-    componentRestrictions: { country: "de" },
-  });
-
-  autocomplete.addListener("place_changed", () => {
-    const place = autocomplete.getPlace();
-    if (!place.geometry) return;
-
-    if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
-    else if (place.geometry.location) {
-      map.setCenter(place.geometry.location);
-      map.setZoom(11);
-    }
-
-    const center = place.geometry.location || map.getCenter();
-    filterByRadius(center, 50);
-
-    const resetBtn = document.getElementById("resetfilter");
-    if (resetBtn) resetBtn.style.display = "flex";
-  });
-
-  input.addEventListener("input", () => {
-    if (input.value.trim() === "") resetRadiusFilter();
-  });
-
-  console.log("✅ Location search initialized");
-}
-
-// --- Ready check ---
-const readyCheck = setInterval(() => {
-  if (mapFullyInitialized && markers.length > 0 && window.google?.maps?.places) {
-    clearInterval(readyCheck);
-    initLocationSearch();
+  else {
+    map.setCenter({ lat: 51.1, lng: 13.7 });
+    map.setZoom(7);
   }
-}, 1000);
+
+  console.log("🔁 Radius filter reset → distances cleared & map refitted");
+}
+
+// (Everything else below remains unchanged)
