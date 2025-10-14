@@ -406,8 +406,7 @@ function resetRadiusFilter() {
   maxZoom: null
 });
 console.log("🆓 Zoom limits removed — full zoom freedom restored");
-
-  console.log("🔁 Radius filter reset + distances cleared + clusters restored");
+console.log("🔁 Radius filter reset + distances cleared + clusters restored");
 }
 
 
