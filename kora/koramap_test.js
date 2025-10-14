@@ -343,7 +343,7 @@ if (visibleItems.length > 0 && !bounds.isEmpty()) {
 
     // Map zoom levels are roughly: 7 ≈ 200 km, 8 ≈ 100 km, 9 ≈ 50 km
     const minZoom = 8; // ≈ 100 km (max zoom-out)
-    const maxZoom = 15; // ≈ 50 km (max zoom-in from initial)
+    const maxZoom = 15; // ≈ 0.8 km (max zoom-in from initial)
 
     // Apply limits
     map.setOptions({ minZoom, maxZoom });
