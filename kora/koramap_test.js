@@ -9,7 +9,6 @@ window.addEventListener("pageshow", () => {
   }
 });
 
-
 let map, clusterer;
 let markers = [];
 let infoWindows = [];
@@ -339,19 +338,25 @@ function filterByRadius(center, radiusKm = 50) {
     }
   });
 
-  // ✅ If no visible items, auto-expand to 100 km
-  if (visibleItems.length === 0 && radiusKm < 100) {
+  // ✅ Auto-expand search radius stepwise up to 200 km
+if (visibleItems.length === 0) {
+  if (radiusKm < 100) {
     console.warn(`⚠️ No items found within ${radiusKm} km — expanding to 100 km...`);
     return filterByRadius(center, 100);
-  }
-
-  // ✅ If still no items after 100 km → show empty state
-  if (visibleItems.length === 0 && radiusKm >= 100) {
-    console.warn("🚫 No items found within 100 km radius — showing empty state");
-    if (emptyState) emptyState.style.display = "block";
+  } else if (radiusKm < 150) {
+    console.warn(`⚠️ Still empty — expanding to 150 km...`);
+    return filterByRadius(center, 150);
+  } else if (radiusKm < 200) {
+    console.warn(`⚠️ Still empty — expanding to 200 km...`);
+    return filterByRadius(center, 200);
   } else {
-    if (emptyState) emptyState.style.display = "none";
+    console.warn("🚫 No items found within 200 km radius — showing empty state");
+    if (emptyState) emptyState.style.display = "block";
   }
+} else {
+  if (emptyState) emptyState.style.display = "none";
+}
+
 
   // ✅ Sort visible items by distance
   visibleItems.sort((a, b) => a.distance - b.distance);
@@ -372,6 +377,7 @@ function filterByRadius(center, radiusKm = 50) {
   }
 
   console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius`);
+
 
   // ✅ Update filter status UI
 const statusBox = document.querySelector(".filter_status");
