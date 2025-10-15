@@ -110,3 +110,150 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 });
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const sliderRoots = document.querySelectorAll('.ent_sliders');
+  if (!sliderRoots.length) return;
+
+  sliderRoots.forEach(root => {
+    const activeWrap   = root.querySelector('.ent_slider_active_wrap');
+    const inactiveWrap = root.querySelector('.ent_slide_inactive_wrap');
+    const contentWrap  = root.querySelector('.ent_slide_content_wrap');
+    const contents     = Array.from(contentWrap.querySelectorAll('.one_slide_content'));
+    const dots         = Array.from(root.querySelectorAll('.slider_icon'));
+
+    // Arrows (right arrow class is on the IMG in your markup)
+    const leftArrow  = root.querySelector('.slide_arow_left');
+    const rightArrow = (root.querySelector('.slide_arow_right') || {})
+                        .closest ? root.querySelector('.slide_arow_right').closest('a') : null;
+
+    let index = 0; // which .one_slide_content is active
+
+    function updateUI() {
+      contents.forEach((el, i) => {
+        if (i === index) el.classList.add('is-active');
+        else el.classList.remove('is-active');
+        el.style.position = i === index ? 'relative' : 'absolute';
+      });
+      dots.forEach((d, i) => d.classList.toggle('active', i === index));
+    }
+
+    function moveRight() {
+      const next = inactiveWrap.querySelector('.ent_slide');
+      if (!next) return;
+      const current = activeWrap.querySelector('.ent_slide');
+      inactiveWrap.appendChild(current);
+      activeWrap.appendChild(next);
+      index = (index + 1) % contents.length;
+      updateUI();
+    }
+
+    function moveLeft() {
+      const next = inactiveWrap.querySelector('.ent_slide:last-child');
+      if (!next) return;
+      const current = activeWrap.querySelector('.ent_slide');
+      inactiveWrap.insertBefore(current, inactiveWrap.firstChild);
+      activeWrap.appendChild(next);
+      index = (index - 1 + contents.length) % contents.length;
+      updateUI();
+    }
+
+    // Arrow clicks
+    if (leftArrow)  leftArrow.addEventListener('click', e => { e.preventDefault(); moveLeft(); });
+    if (rightArrow) rightArrow.addEventListener('click', e => { e.preventDefault(); moveRight(); });
+
+    // Dot clicks
+    dots.forEach((dot, i) => {
+      dot.addEventListener('click', e => {
+        e.preventDefault();
+        const diff = (i - index + contents.length) % contents.length;
+        if (diff === 1) moveRight();
+        else if (diff === 2) moveLeft();
+      });
+    });
+
+    // First render
+    updateUI();
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function () {
+  const sliderRoots = document.querySelectorAll(".v2_slider_rotate");
+  if (!sliderRoots.length) return;
+
+  sliderRoots.forEach((root) => {
+    const links = root.querySelectorAll(".v2_slider_rotate_link");
+    const contents = root.querySelectorAll(".v2_slider_rotate_content-on-item");
+    const leftArrow = root.querySelector(".v2_slider_rotate-arow.left");
+    const rightArrow = root.querySelector(".v2_slider_rotate-arow.right");
+
+    let currentIndex = 0;
+
+    function updateSlider(index) {
+      links.forEach((link, i) => {
+        const iconWrap = link.querySelector(".v2_slider_rotate_link-icon");
+        const activeIcon = link.querySelector(".v2_slider_rotate_link-active-icon");
+        const text = link.querySelector(".v2_slider_rotate_link-text");
+
+        if (i === index) {
+          // Active styles
+          iconWrap.style.backgroundColor = "#006acf";
+          iconWrap.style.boxShadow = "none";
+          activeIcon.style.opacity = "1";
+          text.style.color = "#006acf";
+          link.classList.add("active");
+        } else {
+          // Inactive styles
+          iconWrap.style.backgroundColor = "transparent";
+          iconWrap.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.1)";
+          activeIcon.style.opacity = "0";
+          text.style.color = "#757575";
+          link.classList.remove("active");
+        }
+      });
+
+      contents.forEach((content, i) => {
+        if (i === index) {
+          content.style.opacity = "1";
+          content.style.position = "static";
+          content.style.zIndex = "2";
+        } else {
+          content.style.opacity = "0";
+          content.style.position = "absolute";
+          content.style.zIndex = "1";
+        }
+      });
+
+      currentIndex = index;
+    }
+
+    // Initial setup
+    updateSlider(currentIndex);
+
+    // Link click behavior
+    links.forEach((link, i) => {
+      link.addEventListener("click", function () {
+        updateSlider(i);
+      });
+    });
+
+    // Arrow navigation
+    if (leftArrow) {
+      leftArrow.addEventListener("click", function (e) {
+        e.preventDefault();
+        const newIndex = (currentIndex - 1 + links.length) % links.length;
+        updateSlider(newIndex);
+      });
+    }
+
+    if (rightArrow) {
+      rightArrow.addEventListener("click", function (e) {
+        e.preventDefault();
+        const newIndex = (currentIndex + 1) % links.length;
+        updateSlider(newIndex);
+      });
+    }
+  });
+});
