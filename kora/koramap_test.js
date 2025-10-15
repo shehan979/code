@@ -363,6 +363,19 @@ function filterByRadius(center, radiusKm = 50) {
 
   console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius`);
 
+// ✅ Enable live filtering during active radius search
+if (map) {
+  console.log("🧭 Live map updates active — radius filter mode");
+  google.maps.event.clearListeners(map, "idle"); // remove old idle listeners
+  let moveTimer;
+  map.addListener("idle", () => {
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => {
+      applyLiveRadiusFilter(center, radiusKm);
+    }, 300);
+  });
+}
+
   // ✅ Update filter status UI
 const statusBox = document.querySelector(".filter_status");
 const statusText = document.querySelector(".filterstatus_text");
@@ -373,6 +386,45 @@ if (statusBox && statusText) {
 
 
 }
+
+
+/* ============================================================
+   🧮 Apply Live Radius Filter (on move or zoom)
+============================================================ */
+function applyLiveRadiusFilter(center, radiusKm) {
+  if (!markers.length) return;
+
+  const radiusM = radiusKm * 1000;
+  const bounds = new google.maps.LatLngBounds();
+  const visibleItems = [];
+  const emptyState = document.querySelector(".empty-state-7.w-dyn-empty");
+
+  document.querySelectorAll(".map-loc-item[data-lat][data-lng]").forEach((el) => {
+    const lat = parseFloat(el.dataset.lat);
+    const lng = parseFloat(el.dataset.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const pos = new google.maps.LatLng(lat, lng);
+    const cmsItem = el.closest(".w-dyn-item");
+    if (!cmsItem) return;
+
+    const distance = google.maps.geometry.spherical.computeDistanceBetween(center, pos);
+    if (distance <= radiusM) {
+      cmsItem.style.display = "block";
+      bounds.extend(pos);
+      visibleItems.push(cmsItem);
+    } else {
+      cmsItem.style.display = "none";
+    }
+  });
+
+  if (emptyState) {
+    emptyState.style.display = visibleItems.length ? "none" : "block";
+  }
+
+  console.log(`🧭 Live update → ${visibleItems.length} stores within ${radiusKm} km`);
+}
+
 
 // --- Reset map ---
 function resetRadiusFilter() {
@@ -422,6 +474,11 @@ if (statusBox) statusBox.style.display = "none";
   markers.forEach((m) => { if (m.getMap()) bounds.extend(m.getPosition()); });
   if (!bounds.isEmpty()) map.fitBounds(bounds);
   else { map.setCenter({ lat: 51.1, lng: 13.7 }); map.setZoom(7); }
+  
+  // ✅ Remove all "idle" listeners (stop live radius updates)
+google.maps.event.clearListeners(map, "idle");
+
+
   map.setOptions({
   minZoom: null,
   maxZoom: null
