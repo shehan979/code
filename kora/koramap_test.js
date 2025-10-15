@@ -383,7 +383,7 @@ if (visibleItems.length === 0) {
 const statusBox = document.querySelector(".filter_status");
 const statusText = document.querySelector(".filterstatus_text");
 if (statusBox && statusText) {
-  statusText.textContent = `Showing results within ${radiusKm} km radius`;
+  statusText.textContent = `Ergebnisse im Umkreis von ${radiusKm} km anzeigen`;
   statusBox.style.display = "block";
 }
 
