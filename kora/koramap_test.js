@@ -362,6 +362,16 @@ function filterByRadius(center, radiusKm = 50) {
   }
 
   console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius`);
+
+  // ✅ Update filter status UI
+const statusBox = document.querySelector(".filter_status");
+const statusText = document.querySelector(".filterstatus_text");
+if (statusBox && statusText) {
+  statusText.textContent = `Showing results within ${radiusKm} km radius`;
+  statusBox.style.display = "block";
+}
+
+
 }
 
 // --- Reset map ---
@@ -378,6 +388,11 @@ function resetRadiusFilter() {
   // ✅ Hide empty state again on reset (moved outside the loop)
   const emptyState = document.querySelector(".empty-state-7.w-dyn-empty");
   if (emptyState) emptyState.style.display = "none";
+
+  // ✅ Hide filter status again on reset
+const statusBox = document.querySelector(".filter_status");
+if (statusBox) statusBox.style.display = "none";
+
 
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
