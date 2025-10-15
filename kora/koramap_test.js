@@ -594,14 +594,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- Also show after selecting autocomplete place ---
-  if (window.google?.maps?.places) {
-    const autocomplete = new google.maps.places.Autocomplete(input);
-    autocomplete.addListener("place_changed", () => {
-      if (input.value.trim() !== "") resetBtn.style.display = "flex";
-    });
-  }
-
   // --- Click to reset everything ---
   resetBtn.addEventListener("click", () => {
     console.log("🔁 Reset button clicked — restoring default map and live filter");
