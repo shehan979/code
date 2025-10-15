@@ -13,7 +13,6 @@ let map, clusterer;
 let markers = [];
 let infoWindows = [];
 let mapReady = false;
-let liveFilterActive = false;
 let mapFullyInitialized = false;
 // --- Initialize Google Map ---
 function initMap() {
@@ -388,15 +387,6 @@ if (statusBox && statusText) {
   statusBox.style.display = "block";
 }
 
-  // ✅ Automatically enable live CMS filtering when radius search is used
-  if (typeof initLiveCMSFilterOnMapMove === "function") {
-    // slight delay to wait for map zoom animation to finish
-    setTimeout(() => {
-      initLiveCMSFilterOnMapMove();
-      console.log("🧭 Live CMS filtering activated after radius filter");
-    }, 1000);
-  }
-
 
 }
 
@@ -518,8 +508,6 @@ const readyCheck = setInterval(() => {
    🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync (with Empty State)
 ============================================================ */
 function initLiveCMSFilterOnMapMove() {
-  if (liveFilterActive) return; // ✅ Prevent attaching duplicate listeners
-  liveFilterActive = true;
   if (!map || !markers.length) {
     console.warn("⏳ Waiting for map and markers to be ready for live filter...");
     return setTimeout(initLiveCMSFilterOnMapMove, 800);
@@ -543,8 +531,8 @@ function initLiveCMSFilterOnMapMove() {
   function filterCMSByVisibleMapArea() {
     const input = document.getElementById("searchmap");
 
-   // 🧠 Skip live filter only while typing (not after radius search applied)
-if (document.activeElement === input) return;
+    // 🚫 Skip when user currently has a radius search active
+    if (input && input.value.trim() !== "") return;
 
     const bounds = safeBounds();
     if (!bounds) return;
