@@ -257,3 +257,75 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 });
+
+
+document.addEventListener("DOMContentLoaded", function () {
+  const sliderRoots = document.querySelectorAll(".v2_slider");
+  if (!sliderRoots.length) return;
+
+  sliderRoots.forEach((root) => {
+    const navItems = root.querySelectorAll(".v2_slider_nav-item");
+    const contentItems = root.querySelectorAll(".v2_slider_content-item");
+    const leftArrow = root.querySelector(".v2_slider_arow.left");
+    const rightArrow = root.querySelector(".v2_slider_arow.right");
+
+    let currentIndex = 0;
+
+    function normalizeIndex(index, total) {
+      return (index + total) % total;
+    }
+
+    function updateSlider(index) {
+      const total = contentItems.length;
+      index = normalizeIndex(index, total);
+      currentIndex = index;
+
+      navItems.forEach((item, i) => {
+        const line = item.querySelector(".v2_slider_move-line");
+
+        // Reset all classes
+        line?.classList.remove("active");
+        item.classList.remove("active", "next", "next-next", "next-next-next");
+        item.setAttribute("aria-selected", i === index ? "true" : "false");
+
+        if (i === index) {
+          line?.classList.add("active");
+          item.classList.add("active");
+        } else if (i === normalizeIndex(index + 1, total)) {
+          item.classList.add("next");
+        } else if (i === normalizeIndex(index + 2, total)) {
+          item.classList.add("next-next");
+        } else if (i === normalizeIndex(index + 3, total)) {
+          item.classList.add("next-next-next");
+        }
+      });
+
+      contentItems.forEach((item, i) => {
+        item.classList.toggle("active", i === index);
+      });
+    }
+
+    // Click on nav items
+    navItems.forEach((item, i) => {
+      item.addEventListener("click", () => updateSlider(i));
+    });
+
+    // Arrows
+    if (leftArrow) {
+      leftArrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        updateSlider(currentIndex - 1);
+      });
+    }
+
+    if (rightArrow) {
+      rightArrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        updateSlider(currentIndex + 1);
+      });
+    }
+
+    // Initialize
+    updateSlider(currentIndex);
+  });
+});
