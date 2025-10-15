@@ -362,6 +362,16 @@ function filterByRadius(center, radiusKm = 50) {
   }
 
   console.log(`🧭 Showing ${visibleItems.length} CMS items within ${radiusKm} km radius`);
+
+  // ✅ Update filter status UI
+const statusBox = document.querySelector(".filter_status");
+const statusText = document.querySelector(".filterstatus_text");
+if (statusBox && statusText) {
+  statusText.textContent = `Showing results within ${radiusKm} km radius`;
+  statusBox.style.display = "block";
+}
+
+
 }
 
 // --- Reset map ---
@@ -378,6 +388,11 @@ function resetRadiusFilter() {
   // ✅ Hide empty state again on reset (moved outside the loop)
   const emptyState = document.querySelector(".empty-state-7.w-dyn-empty");
   if (emptyState) emptyState.style.display = "none";
+
+  // ✅ Hide filter status again on reset
+const statusBox = document.querySelector(".filter_status");
+if (statusBox) statusBox.style.display = "none";
+
 
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
@@ -416,7 +431,7 @@ console.log("🔁 Radius filter reset + distances cleared + clusters restored");
 }
 
 /* ============================================================
-   ⌨️ Enter Key → Select First Autocomplete Suggestion
+   ⌨️ Enter Key → Select Highlighted or First Autocomplete Suggestion (Fixed)
 ============================================================ */
 function enableAutocompleteEnterSelect() {
   const input = document.getElementById("searchmap");
@@ -424,17 +439,22 @@ function enableAutocompleteEnterSelect() {
 
   google.maps.event.addDomListener(input, "keydown", function (e) {
     if (e.key === "Enter") {
-      // Prevent form submission or reload
-      e.preventDefault();
+      const pacSelected = document.querySelector(".pac-item-selected");
+      const pacItems = document.querySelectorAll(".pac-item");
 
-      // Simulate arrow down to select first suggestion
-      const simulatedDownArrow = new KeyboardEvent("keydown", { keyCode: 40 });
-      input.dispatchEvent(simulatedDownArrow);
-
-      console.log("↩️ Enter pressed — selecting first suggestion automatically");
+      // ✅ Only force select the first suggestion if none is highlighted
+      if (!pacSelected && pacItems.length > 0) {
+        e.preventDefault();
+        const simulatedDownArrow = new KeyboardEvent("keydown", { keyCode: 40 });
+        input.dispatchEvent(simulatedDownArrow);
+        console.log("↩️ Enter pressed — no selection, auto-picking first suggestion");
+      } else {
+        console.log("↩️ Enter pressed — existing highlighted suggestion selected normally");
+      }
     }
   });
 }
+
 
 /* ============================================================
    🎨 Highlight First Autocomplete Suggestion
@@ -573,14 +593,6 @@ document.addEventListener("DOMContentLoaded", () => {
       resetBtn.style.display = "none";
     }
   });
-
-  // --- Also show after selecting autocomplete place ---
-  if (window.google?.maps?.places) {
-    const autocomplete = new google.maps.places.Autocomplete(input);
-    autocomplete.addListener("place_changed", () => {
-      if (input.value.trim() !== "") resetBtn.style.display = "flex";
-    });
-  }
 
   // --- Click to reset everything ---
   resetBtn.addEventListener("click", () => {
