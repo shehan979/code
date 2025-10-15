@@ -13,11 +13,8 @@ let map, clusterer;
 let markers = [];
 let infoWindows = [];
 let mapReady = false;
+let liveFilterActive = false;
 let mapFullyInitialized = false;
-
-let lastRadiusCenter = null;
-let lastRadiusZoom = null;
-
 // --- Initialize Google Map ---
 function initMap() {
   console.log("🧩 Google Maps API ready — initializing map");
@@ -291,8 +288,6 @@ function initLocationSearch() {
 // --- Filter by radius with auto-expand + empty-state logic ---
 function filterByRadius(center, radiusKm = 50) {
   if (!markers.length) return;
-  lastRadiusCenter = center;
-lastRadiusZoom = map.getZoom();
   if (infoWindows.length) infoWindows.forEach((iw) => iw.close());
   infoWindows = [];
 
@@ -393,6 +388,15 @@ if (statusBox && statusText) {
   statusBox.style.display = "block";
 }
 
+  // ✅ Automatically enable live CMS filtering when radius search is used
+  if (typeof initLiveCMSFilterOnMapMove === "function") {
+    // slight delay to wait for map zoom animation to finish
+    setTimeout(() => {
+      initLiveCMSFilterOnMapMove();
+      console.log("🧭 Live CMS filtering activated after radius filter");
+    }, 1000);
+  }
+
 
 }
 
@@ -442,30 +446,14 @@ if (statusBox) statusBox.style.display = "none";
 
   const bounds = new google.maps.LatLngBounds();
   markers.forEach((m) => { if (m.getMap()) bounds.extend(m.getPosition()); });
-
-  if (lastRadiusCenter) {
-    // ✅ Restore last focused search area
-    map.setCenter(lastRadiusCenter);
-    map.setZoom(lastRadiusZoom || 11);
-    console.log("🎯 Reset filter — restored last radius focus and re-enabled live filtering");
-  } else if (!bounds.isEmpty()) {
-    map.fitBounds(bounds);
-  } else {
-    map.setCenter({ lat: 51.1, lng: 13.7 });
-    map.setZoom(7);
-  }
-
-  // ✅ Remove zoom restrictions for normal map usage
-  map.setOptions({ minZoom: null, maxZoom: null });
-
-  console.log("🆓 Zoom limits removed — full zoom freedom restored");
-  console.log("🔁 Radius filter reset + distances cleared + clusters restored");
-
-   // ✅ Re-enable live CMS filter instantly
-   if (typeof initLiveCMSFilterOnMapMove === "function") {
-    initLiveCMSFilterOnMapMove();
-  }
-
+  if (!bounds.isEmpty()) map.fitBounds(bounds);
+  else { map.setCenter({ lat: 51.1, lng: 13.7 }); map.setZoom(7); }
+  map.setOptions({
+  minZoom: null,
+  maxZoom: null
+});
+console.log("🆓 Zoom limits removed — full zoom freedom restored");
+console.log("🔁 Radius filter reset + distances cleared + clusters restored");
 }
 
 /* ============================================================
@@ -530,6 +518,8 @@ const readyCheck = setInterval(() => {
    🧭 LIVE CMS FILTER — Map Pan / Zoom Bound Sync (with Empty State)
 ============================================================ */
 function initLiveCMSFilterOnMapMove() {
+  if (liveFilterActive) return; // ✅ Prevent attaching duplicate listeners
+  liveFilterActive = true;
   if (!map || !markers.length) {
     console.warn("⏳ Waiting for map and markers to be ready for live filter...");
     return setTimeout(initLiveCMSFilterOnMapMove, 800);
