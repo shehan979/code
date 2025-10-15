@@ -543,8 +543,8 @@ function initLiveCMSFilterOnMapMove() {
   function filterCMSByVisibleMapArea() {
     const input = document.getElementById("searchmap");
 
-    // 🚫 Skip when user currently has a radius search active
-    if (input && input.value.trim() !== "") return;
+   // 🧠 Skip live filter only while typing (not after radius search applied)
+if (document.activeElement === input) return;
 
     const bounds = safeBounds();
     if (!bounds) return;
