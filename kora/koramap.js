@@ -1,5 +1,14 @@
 console.log("🟡 Map script started — waiting for all CMS items..");
 
+// --- Force-clear search field on refresh ---
+window.addEventListener("pageshow", () => {
+  const input = document.getElementById("searchmap");
+  if (input) {
+    input.value = "";
+    console.log("🧹 Cleared search field on refresh");
+  }
+});
+
 let map, clusterer;
 let markers = [];
 let infoWindows = [];
