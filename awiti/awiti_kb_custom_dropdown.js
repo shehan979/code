@@ -1,23 +1,23 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Dropdown system initialized with .active auto-open + Finsweet delay");
+  console.log("🟢 Dropdown system initialized (auto-detect w--current)");
 
   // Hide all dropdown menus initially
   document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
     menu.style.display = "none";
   });
 
-  // Set default icon rotation
+  // Set initial rotation for all chevrons
   document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
     icon.style.transition = "transform 0.25s ease";
     icon.style.transformOrigin = "center";
     icon.style.transform = "rotate(90deg)";
   });
 
-  // Toggle click listener
+  // Click listener for toggle
   document.addEventListener("click", e => {
     const toggle = e.target.closest(".custom_dropdown_toggle");
     if (!toggle) return;
-    if (e.target.closest("a")) return; // ignore link clicks
+    if (e.target.closest("a")) return; // ignore direct link clicks
     e.preventDefault();
     e.stopPropagation();
 
@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (icon) icon.style.transform = "rotate(90deg)";
   }
 
-  // --- Auto-open for preopened dropdowns
+  // Open any pre-marked .open dropdowns
   function expandPreOpenedDropdowns() {
     document.querySelectorAll(".custom_dropdown.open").forEach(drop => {
       const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
@@ -68,31 +68,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
   expandPreOpenedDropdowns();
 
-  // --- NEW: Detect and open dropdowns for .active links (with retry)
-  function openActiveDropdowns() {
-    const activeLinks = document.querySelectorAll("a.active");
-    if (activeLinks.length === 0) {
-      console.log("⏳ No .active link yet — retrying...");
-      return false; // retry later
+  // --- Auto detect .w--current, set .active, and open dropdowns ---
+  function activateCurrentLink() {
+    const currentLinks = document.querySelectorAll("a.w--current");
+    if (currentLinks.length === 0) {
+      console.log("⏳ No .w--current yet — retrying...");
+      return false; // retry later if CMS not loaded
     }
 
-    activeLinks.forEach(link => {
+    currentLinks.forEach(link => {
+      // Add .active styling
+      link.classList.add("active");
       link.style.color = "#007BFF";
       link.style.fontWeight = "600";
+
+      // Open all parent dropdowns
       let parentDropdown = link.closest(".custom_dropdown");
       while (parentDropdown) {
         openDropdown(parentDropdown);
         parentDropdown = parentDropdown.parentElement?.closest(".custom_dropdown");
       }
     });
-    console.log("✅ Active link dropdowns opened.");
+
+    console.log("✅ Current link activated and dropdowns opened.");
     return true;
   }
 
-  // Try multiple times (CMS loads asynchronously)
+  // Retry loop (for async Finsweet CMS content)
   let attempts = 0;
   const interval = setInterval(() => {
-    if (openActiveDropdowns() || attempts > 10) clearInterval(interval);
+    if (activateCurrentLink() || attempts > 10) clearInterval(interval);
     attempts++;
   }, 400);
 });
