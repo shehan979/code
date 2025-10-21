@@ -1,72 +1,65 @@
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("🟡 Initializing custom dropdowns...");
+  console.log("🟡 Initializing custom dropdowns (delegated mode)...");
 
-  // Main init function
-  function initDropdowns() {
-    const dropdowns = document.querySelectorAll(".custom_dropdown");
-    console.log("✅ Dropdowns found:", dropdowns.length);
+  // --- Close all menus on start ---
+  document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
+    menu.style.maxHeight = "0";
+    menu.style.overflow = "hidden";
+    menu.style.transition = "max-height 0.3s ease";
+  });
 
-    dropdowns.forEach(dropdown => {
-      const toggle = dropdown.querySelector(":scope > .custom_dropdown_toggle");
-      const closeBtn = dropdown.querySelector(":scope > .custom_dropdown_toggle > .custom_dropdown_close");
-      const menu = dropdown.querySelector(":scope > .custom_dropdown_navigation");
-      const icon = dropdown.querySelector(":scope > .custom_dropdown_toggle > .custom_dropdown_close_icon");
+  document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
+    icon.style.transition = "transform 0.3s ease";
+    icon.style.transform = "rotate(0deg)";
+  });
 
-      if (!toggle || !closeBtn || !menu) return;
+  // --- Event delegation for toggles ---
+  document.addEventListener("click", function (e) {
+    const toggle = e.target.closest(".custom_dropdown_toggle");
+    const closeBtn = e.target.closest(".custom_dropdown_close");
 
-      // --- Initialize all closed ---
-      dropdown.classList.remove("open");
-      menu.style.maxHeight = "0";
-      menu.style.overflow = "hidden";
-      menu.style.transition = "max-height 0.3s ease";
-      if (icon) {
-        icon.style.transition = "transform 0.3s ease";
-        icon.style.transform = "rotate(0deg)";
+    // --- Open/close dropdown ---
+    if (toggle && !e.target.closest("a")) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const dropdown = toggle.closest(".custom_dropdown");
+      const menu = dropdown.querySelector(".custom_dropdown_navigation");
+      const icon = dropdown.querySelector(".custom_dropdown_close_icon");
+
+      const isOpen = dropdown.classList.contains("open");
+      if (isOpen) {
+        dropdown.classList.remove("open");
+        menu.style.maxHeight = "0";
+        if (icon) icon.style.transform = "rotate(0deg)";
+      } else {
+        dropdown.classList.add("open");
+        menu.style.maxHeight = menu.scrollHeight + "px";
+        if (icon) icon.style.transform = "rotate(-90deg)";
       }
 
-      // --- Toggle dropdown ---
-      toggle.addEventListener("click", e => {
-        if (e.target.closest("a")) return; // ignore links
-        e.stopPropagation();
+      updateParentHeights(dropdown);
+    }
 
-        const isOpen = dropdown.classList.contains("open");
-        if (isOpen) {
-          closeDropdown(dropdown, menu, icon);
-        } else {
-          openDropdown(dropdown, menu, icon);
-        }
+    // --- Close button only ---
+    if (closeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const dropdown = closeBtn.closest(".custom_dropdown");
+      const menu = dropdown.querySelector(".custom_dropdown_navigation");
+      const icon = dropdown.querySelector(".custom_dropdown_close_icon");
+      dropdown.classList.remove("open");
+      menu.style.maxHeight = "0";
+      if (icon) icon.style.transform = "rotate(0deg)";
+      updateParentHeights(dropdown);
+    }
+  });
 
-        updateParentHeights(dropdown);
-      });
-
-      // --- Close button ---
-      closeBtn.addEventListener("click", e => {
-        e.stopPropagation();
-        closeDropdown(dropdown, menu, icon);
-        updateParentHeights(dropdown);
-      });
-    });
-  }
-
-  // --- Helper: open dropdown ---
-  function openDropdown(dropdown, menu, icon) {
-    dropdown.classList.add("open");
-    menu.style.maxHeight = menu.scrollHeight + "px";
-    if (icon) icon.style.transform = "rotate(-90deg)";
-  }
-
-  // --- Helper: close dropdown ---
-  function closeDropdown(dropdown, menu, icon) {
-    dropdown.classList.remove("open");
-    menu.style.maxHeight = "0";
-    if (icon) icon.style.transform = "rotate(0deg)";
-  }
-
-  // --- Helper: expand parent containers to fit visible submenus ---
+  // --- Helper: ensure parent dropdown height adjusts when children open ---
   function updateParentHeights(childDropdown) {
     let parent = childDropdown.parentElement.closest(".custom_dropdown");
     while (parent) {
-      const parentMenu = parent.querySelector(":scope > .custom_dropdown_navigation");
+      const parentMenu = parent.querySelector(".custom_dropdown_navigation");
       if (parent.classList.contains("open") && parentMenu) {
         parentMenu.style.maxHeight = parentMenu.scrollHeight + "px";
       }
@@ -74,9 +67,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Run once immediately (initial state all closed)
-  initDropdowns();
-
-  // Run again after CMS finishes loading (simple delay)
-  setTimeout(initDropdowns, 1500);
+  // --- Second pass after Finsweet loads ---
+  setTimeout(() => {
+    console.log("🔁 Rebinding dropdowns after CMS load...");
+    document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
+      menu.style.maxHeight = "0";
+      menu.style.overflow = "hidden";
+    });
+  }, 1500);
 });
