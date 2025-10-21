@@ -4,10 +4,10 @@
     transition: max-height 0.3s ease;
   }
   
-  .custom_dropdown.open .custom_dropdown_navigation {
+  .custom_dropdown.open > .custom_dropdown_navigation {
     overflow: hidden;
   }
-
+  
   .custom_dropdown_close_icon {
     transition: transform 0.3s ease;
     transform-origin: center;
