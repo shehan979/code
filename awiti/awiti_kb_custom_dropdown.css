@@ -1,0 +1,11 @@
+.custom_dropdown.open .custom_dropdown_navigation {
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  
+  .custom_dropdown_navigation {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  
