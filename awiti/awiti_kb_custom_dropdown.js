@@ -1,57 +1,55 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Multi-level dropdown system active");
+  console.log("🟢 Multi-level dropdowns initialized (flicker-free)");
 
-  // 🔹 Basic styles for animations
-  document.querySelectorAll(".custom_dropdown_navigation").forEach(m => {
-    m.style.maxHeight = "0";
-    m.style.overflow = "hidden";
-    m.style.transition = "max-height 0.3s ease";
+  // --- Setup base styles ---
+  document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
+    menu.style.maxHeight = "0";
+    menu.style.overflow = "hidden";
+    menu.style.transition = "max-height 0.3s ease";
   });
-  document.querySelectorAll(".custom_dropdown_close_icon").forEach(i => {
-    i.style.transition = "transform 0.3s ease";
-    i.style.transformOrigin = "center";
-    i.style.transform = "rotate(0deg)";
+  document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
+    icon.style.transition = "transform 0.3s ease";
+    icon.style.transformOrigin = "center";
+    icon.style.transform = "rotate(0deg)";
   });
 
-  // 🔹 Delegated click handler (covers dynamically loaded CMS items)
+  // --- Delegated click handler ---
   document.addEventListener("click", e => {
     const toggle = e.target.closest(".custom_dropdown_toggle");
-    if (!toggle || e.target.closest("a")) return; // ignore link clicks
-    e.preventDefault();
+    if (!toggle) return;
+
+    // ❌ Skip link clicks
+    if (e.target.closest("a")) return;
+
+    // ✅ Stop event bubbling to parent dropdowns
     e.stopPropagation();
+    e.preventDefault();
 
     const dropdown = toggle.closest(".custom_dropdown");
-    if (!dropdown) return;
-
     const menu = dropdown.querySelector(":scope > .custom_dropdown_navigation");
     const icon = dropdown.querySelector(":scope > .custom_dropdown_close_icon");
+    if (!menu) return;
 
-    // find dropdown level class (dropdown-lv1, lv2, etc.)
     const levelCls = Array.from(dropdown.classList).find(c => c.startsWith("dropdown-lv"));
 
-    // close siblings of same level
+    // Close siblings of same level
     if (levelCls) {
-      document.querySelectorAll(`.${levelCls}.open`).forEach(sib => {
-        if (sib !== dropdown) {
-          closeDropdown(sib);
-          // also close nested children inside
-          sib.querySelectorAll(".custom_dropdown.open").forEach(closeDropdown);
+      document.querySelectorAll(`.${levelCls}.open`).forEach(sibling => {
+        if (sibling !== dropdown) {
+          closeDropdown(sibling);
+          sibling.querySelectorAll(".custom_dropdown.open").forEach(closeDropdown);
         }
       });
     }
 
-    // toggle current dropdown
-    if (dropdown.classList.contains("open")) {
-      closeDropdown(dropdown);
-    } else {
-      openDropdown(dropdown);
-    }
+    // Toggle clicked dropdown
+    dropdown.classList.contains("open") ? closeDropdown(dropdown) : openDropdown(dropdown);
 
-    // adjust parent heights (so nested menus resize properly)
+    // Update parent heights so nested menus expand smoothly
     updateParentHeights(dropdown);
   });
 
-  // 🔹 Open dropdown function
+  // --- Helper functions ---
   function openDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
@@ -60,7 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (icon) icon.style.transform = "rotate(-90deg)";
   }
 
-  // 🔹 Close dropdown function
   function closeDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
@@ -69,7 +66,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (icon) icon.style.transform = "rotate(0deg)";
   }
 
-  // 🔹 Recalculate heights for nested open parents
   function updateParentHeights(child) {
     let parent = child.parentElement.closest(".custom_dropdown");
     while (parent) {
@@ -81,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 🔹 Auto-expand any dropdowns already marked as .open (e.g., active page)
+  // --- Auto-expand any pre-opened dropdowns ---
   function expandPreOpenedDropdowns() {
     document.querySelectorAll(".custom_dropdown.open").forEach(drop => {
       const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
@@ -91,9 +87,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Run immediately for static content
   expandPreOpenedDropdowns();
-
-  // Run again after Finsweet CMS injection
-  setTimeout(expandPreOpenedDropdowns, 1500);
+  setTimeout(expandPreOpenedDropdowns, 1500); // Re-run after Finsweet CMS load
 });
