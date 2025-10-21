@@ -1,11 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Dropdown system initialized (active-page auto-open)");
+  console.log("🟢 Dropdown system initialized with .active auto-open");
 
   // hide all menus by default
   document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
     menu.style.display = "none";
   });
 
+  // set base chevron rotation
   document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
     icon.style.transition = "transform 0.25s ease";
     icon.style.transformOrigin = "center";
@@ -28,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const levelCls = Array.from(dropdown.classList).find(c => c.startsWith("dropdown-lv"));
 
-    // close siblings of same level
+    // close siblings at same level
     if (levelCls) {
       document.querySelectorAll(`.${levelCls}.open`).forEach(sib => {
         if (sib !== dropdown) {
@@ -38,11 +39,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // toggle this dropdown
+    // toggle
     dropdown.classList.contains("open") ? closeDropdown(dropdown) : openDropdown(dropdown);
   });
 
-  // open / close helpers
+  // helper functions
   function openDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
@@ -59,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (icon) icon.style.transform = "rotate(90deg)";
   }
 
-  // expand all pre-opened dropdowns
+  // reopen any pre-marked open dropdowns
   function expandPreOpenedDropdowns() {
     document.querySelectorAll(".custom_dropdown.open").forEach(drop => {
       const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
@@ -70,28 +71,25 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   expandPreOpenedDropdowns();
-  setTimeout(expandPreOpenedDropdowns, 1500); // run again after CMS inject
+  setTimeout(expandPreOpenedDropdowns, 1500); // safety for Finsweet load
 
-  // --- NEW: Auto-open dropdowns for the active page link ---
-  function openActivePathDropdowns() {
-    const currentPath = window.location.pathname;
-    // find active link: either Webflow .w--current OR matching pathname
-    const activeLink = document.querySelector(
-      `a.w--current, a[href='${currentPath}']`
-    );
+  // --- NEW: Auto-open dropdowns for .active links ---
+  function openActiveDropdowns() {
+    const activeLinks = document.querySelectorAll("a.active");
+    activeLinks.forEach(link => {
+      // highlight link text
+      link.style.color = "#007BFF"; // blue color for active link
+      link.style.fontWeight = "600";
 
-    if (!activeLink) return;
-
-    console.log("📂 Active page detected:", currentPath);
-
-    // climb up and open all parent dropdowns
-    let parentDropdown = activeLink.closest(".custom_dropdown");
-    while (parentDropdown) {
-      openDropdown(parentDropdown);
-      parentDropdown = parentDropdown.parentElement.closest(".custom_dropdown");
-    }
+      // climb up and open all parent dropdowns
+      let parentDropdown = link.closest(".custom_dropdown");
+      while (parentDropdown) {
+        openDropdown(parentDropdown);
+        parentDropdown = parentDropdown.parentElement.closest(".custom_dropdown");
+      }
+    });
   }
 
-  // run after a short delay (to allow Finsweet items to load)
-  setTimeout(openActivePathDropdowns, 1000);
+  // run after delay to allow CMS to populate
+  setTimeout(openActiveDropdowns, 1000);
 });
