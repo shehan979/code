@@ -11,39 +11,30 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("✅ Dropdowns ready:", dropdowns.length);
 
     dropdowns.forEach(dropdown => {
-      const toggleBtn = dropdown.querySelector(".custom_dropdown_toggle");
-      const closeBtn = dropdown.querySelector(".custom_dropdown_close");
-      const menu = dropdown.querySelector(".custom_dropdown_navigation");
-      const icon = dropdown.querySelector(".custom_dropdown_close_icon");
+      const toggleBtn = dropdown.querySelector(":scope > .custom_dropdown_toggle");
+      const closeBtn = dropdown.querySelector(":scope > .custom_dropdown_toggle > .custom_dropdown_close");
+      const menu = dropdown.querySelector(":scope > .custom_dropdown_navigation");
+      const icon = dropdown.querySelector(":scope > .custom_dropdown_toggle > .custom_dropdown_close_icon");
 
       if (!toggleBtn || !closeBtn || !menu) return;
 
-      // initialize
+      // Initialize closed
       menu.style.maxHeight = "0";
       menu.style.overflow = "hidden";
       menu.style.transition = "max-height 0.3s ease";
+      if (icon) icon.style.transition = "transform 0.3s ease";
 
-      // --- Toggle open ---
+      // --- Toggle open for current level only ---
       toggleBtn.addEventListener("click", e => {
-        if (e.target.closest("a")) return;
+        if (e.target.closest("a")) return; // ignore link clicks
         e.stopPropagation();
-
-        dropdowns.forEach(d => {
-          if (d !== dropdown) {
-            d.classList.remove("open");
-            const m = d.querySelector(".custom_dropdown_navigation");
-            const i = d.querySelector(".custom_dropdown_close_icon");
-            if (m) m.style.maxHeight = "0";
-            if (i) i.style.transform = "rotate(0deg)";
-          }
-        });
 
         const isOpen = dropdown.classList.toggle("open");
         menu.style.maxHeight = isOpen ? menu.scrollHeight + "px" : "0";
         if (icon) icon.style.transform = isOpen ? "rotate(-90deg)" : "rotate(0deg)";
       });
 
-      // --- Close icon ---
+      // --- Close current dropdown only ---
       closeBtn.addEventListener("click", e => {
         e.stopPropagation();
         dropdown.classList.remove("open");
@@ -51,9 +42,11 @@ document.addEventListener("DOMContentLoaded", function () {
         if (icon) icon.style.transform = "rotate(0deg)";
       });
 
-      // --- Outside click ---
+      // --- Click outside closes only top-level dropdowns ---
       document.addEventListener("click", e => {
-        if (!dropdown.contains(e.target)) {
+        const isInside = dropdown.contains(e.target);
+        const isChild = dropdown.querySelector(".custom_dropdown")?.contains(e.target);
+        if (!isInside && !isChild) {
           dropdown.classList.remove("open");
           menu.style.maxHeight = "0";
           if (icon) icon.style.transform = "rotate(0deg)";
@@ -62,6 +55,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // Wait for Finsweet CMS load
   document.addEventListener("fs-cmsload", initDropdowns);
   setTimeout(initDropdowns, 1000);
 });
