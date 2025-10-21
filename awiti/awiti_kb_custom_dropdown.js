@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Multi-level dropdowns initialized (flicker-free)");
+  console.log("🟢 Dropdown system initialized (with async height fix)");
 
-  // --- Setup base styles ---
+  // --- Setup base transitions ---
   document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
     menu.style.maxHeight = "0";
     menu.style.overflow = "hidden";
@@ -13,15 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
     icon.style.transform = "rotate(0deg)";
   });
 
-  // --- Delegated click handler ---
+  // --- Delegated click listener ---
   document.addEventListener("click", e => {
     const toggle = e.target.closest(".custom_dropdown_toggle");
     if (!toggle) return;
+    if (e.target.closest("a")) return; // skip link clicks
 
-    // ❌ Skip link clicks
-    if (e.target.closest("a")) return;
-
-    // ✅ Stop event bubbling to parent dropdowns
     e.stopPropagation();
     e.preventDefault();
 
@@ -34,28 +31,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Close siblings of same level
     if (levelCls) {
-      document.querySelectorAll(`.${levelCls}.open`).forEach(sibling => {
-        if (sibling !== dropdown) {
-          closeDropdown(sibling);
-          sibling.querySelectorAll(".custom_dropdown.open").forEach(closeDropdown);
+      document.querySelectorAll(`.${levelCls}.open`).forEach(sib => {
+        if (sib !== dropdown) {
+          closeDropdown(sib);
+          sib.querySelectorAll(".custom_dropdown.open").forEach(closeDropdown);
         }
       });
     }
 
-    // Toggle clicked dropdown
-    dropdown.classList.contains("open") ? closeDropdown(dropdown) : openDropdown(dropdown);
+    // Toggle
+    if (dropdown.classList.contains("open")) {
+      closeDropdown(dropdown);
+    } else {
+      openDropdown(dropdown);
+    }
 
-    // Update parent heights so nested menus expand smoothly
     updateParentHeights(dropdown);
   });
 
-  // --- Helper functions ---
+  // --- Functions ---
   function openDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
     drop.classList.add("open");
-    if (menu) menu.style.maxHeight = menu.scrollHeight + "px";
     if (icon) icon.style.transform = "rotate(-90deg)";
+
+    // 🕒 Delay measuring height to ensure CMS children fully rendered
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const fullHeight = menu.scrollHeight;
+        menu.style.maxHeight = fullHeight + "px";
+      }, 100); // 100ms delay fixes 21px bug
+    });
   }
 
   function closeDropdown(drop) {
@@ -71,22 +78,30 @@ document.addEventListener("DOMContentLoaded", () => {
     while (parent) {
       const menu = parent.querySelector(":scope > .custom_dropdown_navigation");
       if (parent.classList.contains("open") && menu) {
-        menu.style.maxHeight = menu.scrollHeight + "px";
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            menu.style.maxHeight = menu.scrollHeight + "px";
+          }, 100);
+        });
       }
       parent = parent.parentElement.closest(".custom_dropdown");
     }
   }
 
-  // --- Auto-expand any pre-opened dropdowns ---
+  // --- Auto-expand pre-opened dropdowns ---
   function expandPreOpenedDropdowns() {
     document.querySelectorAll(".custom_dropdown.open").forEach(drop => {
       const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
       const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
-      if (menu) menu.style.maxHeight = menu.scrollHeight + "px";
-      if (icon) icon.style.transform = "rotate(-90deg)";
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (menu) menu.style.maxHeight = menu.scrollHeight + "px";
+          if (icon) icon.style.transform = "rotate(-90deg)";
+        }, 100);
+      });
     });
   }
 
   expandPreOpenedDropdowns();
-  setTimeout(expandPreOpenedDropdowns, 1500); // Re-run after Finsweet CMS load
+  setTimeout(expandPreOpenedDropdowns, 1500); // run again after Finsweet render
 });
