@@ -74,5 +74,5 @@ document.addEventListener("DOMContentLoaded", function () {
       menu.style.maxHeight = "0";
       menu.style.overflow = "hidden";
     });
-  }, 1500);
+  }, 2500);
 });
