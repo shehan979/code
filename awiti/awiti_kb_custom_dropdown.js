@@ -1,47 +1,36 @@
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("🟡 Initializing custom dropdowns (delegated mode)...");
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("🟢 Dropdown fix: prevent double trigger");
 
-  // --- Close all menus on start ---
-  document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
-    menu.style.maxHeight = "0";
-    menu.style.overflow = "hidden";
-    menu.style.transition = "max-height 0.3s ease";
+  // Start closed
+  document.querySelectorAll(".custom_dropdown_navigation").forEach(m=>{
+    m.style.maxHeight="0";m.style.overflow="hidden";m.style.transition="max-height .3s ease";
+  });
+  document.querySelectorAll(".custom_dropdown_close_icon").forEach(i=>{
+    i.style.transition="transform .3s ease";i.style.transform="rotate(0deg)";
   });
 
-  document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
-    icon.style.transition = "transform 0.3s ease";
-    icon.style.transform = "rotate(0deg)";
-  });
-
-  // --- Event delegation for toggles ---
-  document.addEventListener("click", function (e) {
+  document.addEventListener("click", e => {
     const toggle = e.target.closest(".custom_dropdown_toggle");
     const closeBtn = e.target.closest(".custom_dropdown_close");
 
-    // --- Open/close dropdown ---
+    // ---------- Toggle ----------
     if (toggle && !e.target.closest("a")) {
       e.preventDefault();
-      e.stopPropagation();
-
+      e.stopPropagation();          // ← stops bubbling to parent toggles
+      toggle.dataset.justClicked = "1";  // flag this toggle
       const dropdown = toggle.closest(".custom_dropdown");
       const menu = dropdown.querySelector(".custom_dropdown_navigation");
       const icon = dropdown.querySelector(".custom_dropdown_close_icon");
 
       const isOpen = dropdown.classList.contains("open");
-      if (isOpen) {
-        dropdown.classList.remove("open");
-        menu.style.maxHeight = "0";
-        if (icon) icon.style.transform = "rotate(0deg)";
-      } else {
-        dropdown.classList.add("open");
-        menu.style.maxHeight = menu.scrollHeight + "px";
-        if (icon) icon.style.transform = "rotate(-90deg)";
-      }
-
+      dropdown.classList.toggle("open", !isOpen);
+      menu.style.maxHeight = isOpen ? "0" : menu.scrollHeight + "px";
+      if (icon) icon.style.transform = isOpen ? "rotate(0deg)" : "rotate(-90deg)";
       updateParentHeights(dropdown);
+      setTimeout(()=>delete toggle.dataset.justClicked,200);
     }
 
-    // --- Close button only ---
+    // ---------- Close ----------
     if (closeBtn) {
       e.preventDefault();
       e.stopPropagation();
@@ -53,26 +42,19 @@ document.addEventListener("DOMContentLoaded", function () {
       if (icon) icon.style.transform = "rotate(0deg)";
       updateParentHeights(dropdown);
     }
-  });
+  }, true); // use capture phase to intercept early
 
-  // --- Helper: ensure parent dropdown height adjusts when children open ---
-  function updateParentHeights(childDropdown) {
-    let parent = childDropdown.parentElement.closest(".custom_dropdown");
-    while (parent) {
-      const parentMenu = parent.querySelector(".custom_dropdown_navigation");
-      if (parent.classList.contains("open") && parentMenu) {
-        parentMenu.style.maxHeight = parentMenu.scrollHeight + "px";
+  function updateParentHeights(child){
+    let parent = child.parentElement.closest(".custom_dropdown");
+    while(parent){
+      const m = parent.querySelector(".custom_dropdown_navigation");
+      if(parent.classList.contains("open") && m){
+        m.style.maxHeight = m.scrollHeight + "px";
       }
       parent = parent.parentElement.closest(".custom_dropdown");
     }
   }
 
-  // --- Second pass after Finsweet loads ---
-  setTimeout(() => {
-    console.log("🔁 Rebinding dropdowns after CMS load...");
-    document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
-      menu.style.maxHeight = "0";
-      menu.style.overflow = "hidden";
-    });
-  }, 2500);
+  // Re-bind after CMS injection
+  setTimeout(()=>console.log("🔁 CMS items bound"),1500);
 });
