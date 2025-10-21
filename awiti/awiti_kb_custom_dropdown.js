@@ -1,82 +1,88 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Multi-level dropdown logic active");
+  console.log("🟢 Multi-level dropdown system initialized");
 
-  // Start all closed
-  document.querySelectorAll(".custom_dropdown_navigation").forEach(menu=>{
-    menu.style.maxHeight="0";
-    menu.style.overflow="hidden";
-    menu.style.transition="max-height .3s ease";
-  });
-  document.querySelectorAll(".custom_dropdown_close_icon").forEach(i=>{
-    i.style.transition="transform .3s ease"; i.style.transform="rotate(0deg)";
-  });
+  // Initialize dropdown
+  function initDropdown(levelClass) {
+    const dropdowns = document.querySelectorAll(levelClass);
 
-  // Delegated click listener
-  document.addEventListener("click", e=>{
-    const toggle = e.target.closest(".custom_dropdown_toggle");
-    if (!toggle || e.target.closest("a")) return;
+    dropdowns.forEach(dropdown => {
+      const toggle = dropdown.querySelector(":scope > .custom_dropdown_toggle");
+      const menu = dropdown.querySelector(":scope > .custom_dropdown_navigation");
+      const icon = dropdown.querySelector(":scope > .custom_dropdown_toggle .custom_dropdown_close_icon");
 
-    e.preventDefault(); e.stopPropagation();
+      if (!toggle || !menu) return;
 
-    const dropdown = toggle.closest(".custom_dropdown");
-    if (!dropdown) return;
+      // Start closed
+      menu.style.maxHeight = "0";
+      menu.style.overflow = "hidden";
+      menu.style.transition = "max-height 0.3s ease";
+      if (icon) icon.style.transition = "transform 0.3s ease";
 
-    const menu = dropdown.querySelector(":scope > .custom_dropdown_navigation");
-    const icon = dropdown.querySelector(":scope > .custom_dropdown_toggle .custom_dropdown_close_icon");
+      toggle.addEventListener("click", e => {
+        if (e.target.closest("a")) return;
+        e.preventDefault();
+        e.stopPropagation();
 
-    const isOpen = dropdown.classList.contains("open");
+        const isOpen = dropdown.classList.contains("open");
 
-    // Close siblings at same level
-    const siblings = getSiblings(dropdown);
-    siblings.forEach(sib=>{
-      sib.classList.remove("open");
-      const sibMenu = sib.querySelector(":scope > .custom_dropdown_navigation");
-      const sibIcon = sib.querySelector(":scope > .custom_dropdown_toggle .custom_dropdown_close_icon");
-      if (sibMenu) sibMenu.style.maxHeight="0";
-      if (sibIcon) sibIcon.style.transform="rotate(0deg)";
-      // also close all nested children
-      sib.querySelectorAll(".custom_dropdown.open").forEach(c=>{
-        c.classList.remove("open");
-        const m=c.querySelector(":scope > .custom_dropdown_navigation");
-        const i=c.querySelector(":scope > .custom_dropdown_toggle .custom_dropdown_close_icon");
-        if(m)m.style.maxHeight="0";
-        if(i)i.style.transform="rotate(0deg)";
+        // Close all siblings of same level
+        dropdowns.forEach(sibling => {
+          if (sibling !== dropdown) {
+            sibling.classList.remove("open");
+            const siblingMenu = sibling.querySelector(":scope > .custom_dropdown_navigation");
+            const siblingIcon = sibling.querySelector(":scope > .custom_dropdown_toggle .custom_dropdown_close_icon");
+            if (siblingMenu) siblingMenu.style.maxHeight = "0";
+            if (siblingIcon) siblingIcon.style.transform = "rotate(0deg)";
+            // also close all nested dropdowns
+            sibling.querySelectorAll(".open").forEach(inner => {
+              inner.classList.remove("open");
+              const innerMenu = inner.querySelector(":scope > .custom_dropdown_navigation");
+              const innerIcon = inner.querySelector(":scope > .custom_dropdown_toggle .custom_dropdown_close_icon");
+              if (innerMenu) innerMenu.style.maxHeight = "0";
+              if (innerIcon) innerIcon.style.transform = "rotate(0deg)";
+            });
+          }
+        });
+
+        // Toggle current dropdown
+        if (isOpen) {
+          dropdown.classList.remove("open");
+          menu.style.maxHeight = "0";
+          if (icon) icon.style.transform = "rotate(0deg)";
+        } else {
+          dropdown.classList.add("open");
+          menu.style.maxHeight = menu.scrollHeight + "px";
+          if (icon) icon.style.transform = "rotate(-90deg)";
+        }
+
+        // Update parent heights
+        updateParentHeights(dropdown);
       });
     });
-
-    // Toggle current dropdown
-    if (isOpen) {
-      dropdown.classList.remove("open");
-      if (menu) menu.style.maxHeight="0";
-      if (icon) icon.style.transform="rotate(0deg)";
-    } else {
-      dropdown.classList.add("open");
-      if (menu) menu.style.maxHeight = menu.scrollHeight + "px";
-      if (icon) icon.style.transform="rotate(-90deg)";
-    }
-
-    // Expand parent heights so nothing is clipped
-    updateParentHeights(dropdown);
-  });
-
-  // Helper: siblings at same nesting level
-  function getSiblings(el){
-    if(!el.parentElement) return [];
-    return [...el.parentElement.children].filter(c=>c!==el && c.classList.contains("custom_dropdown"));
   }
 
-  // Helper: recompute parent container height when child opens
-  function updateParentHeights(child){
-    let parent=child.parentElement.closest(".custom_dropdown");
-    while(parent){
-      const menu=parent.querySelector(":scope > .custom_dropdown_navigation");
-      if(parent.classList.contains("open") && menu){
-        menu.style.maxHeight=menu.scrollHeight+"px";
+  // Update parent container height to fit visible submenus
+  function updateParentHeights(childDropdown) {
+    let parent = childDropdown.parentElement.closest(".custom_dropdown");
+    while (parent) {
+      const parentMenu = parent.querySelector(":scope > .custom_dropdown_navigation");
+      if (parent.classList.contains("open") && parentMenu) {
+        parentMenu.style.maxHeight = parentMenu.scrollHeight + "px";
       }
-      parent=parent.parentElement.closest(".custom_dropdown");
+      parent = parent.parentElement.closest(".custom_dropdown");
     }
   }
 
-  // Second pass for Finsweet-loaded content
-  setTimeout(()=>document.querySelectorAll(".custom_dropdown_navigation").forEach(m=>{m.style.maxHeight="0";}),1500);
+  // Initialize all levels
+  initDropdown(".dropdown-lv1");
+  initDropdown(".dropdown-lv2");
+  initDropdown(".dropdown-lv3");
+
+  // Re-init for delayed CMS content (Finsweet)
+  setTimeout(() => {
+    initDropdown(".dropdown-lv1");
+    initDropdown(".dropdown-lv2");
+    initDropdown(".dropdown-lv3");
+    console.log("🔁 Reinitialized dropdowns after CMS load");
+  }, 1500);
 });
