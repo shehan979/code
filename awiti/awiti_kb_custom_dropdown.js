@@ -1,51 +1,46 @@
 document.addEventListener("DOMContentLoaded", function () {
+  console.log("🟡 Initializing custom dropdowns...");
 
-  // ✅ Run only after Finsweet finishes loading all CMS items
-  function waitForFinsweetAndInit() {
-    const cmsLists = document.querySelectorAll("[fs-list-load='all']");
-    const allLoaded = Array.from(cmsLists).every(list => list.querySelector(".w-dyn-item"));
-
-    if (!cmsLists.length || !allLoaded) {
-      console.log("⏳ Waiting for Finsweet to finish rendering dropdown items...");
-      setTimeout(waitForFinsweetAndInit, 500);
-      return;
-    }
-
-    console.log("✅ Finsweet CMS content fully loaded");
-    initDropdowns();
-  }
-
+  // Main init function
   function initDropdowns() {
     const dropdowns = document.querySelectorAll(".custom_dropdown");
-    console.log("🔧 Initializing dropdowns:", dropdowns.length);
+    console.log("✅ Dropdowns found:", dropdowns.length);
 
     dropdowns.forEach(dropdown => {
       const toggle = dropdown.querySelector(":scope > .custom_dropdown_toggle");
-      const closeWrap = dropdown.querySelector(":scope > .custom_dropdown_toggle > .custom_dropdown_close");
+      const closeBtn = dropdown.querySelector(":scope > .custom_dropdown_toggle > .custom_dropdown_close");
       const menu = dropdown.querySelector(":scope > .custom_dropdown_navigation");
       const icon = dropdown.querySelector(":scope > .custom_dropdown_toggle > .custom_dropdown_close_icon");
 
-      if (!toggle || !closeWrap || !menu) return;
+      if (!toggle || !closeBtn || !menu) return;
 
-      // Setup
+      // --- Initialize all closed ---
+      dropdown.classList.remove("open");
       menu.style.maxHeight = "0";
       menu.style.overflow = "hidden";
       menu.style.transition = "max-height 0.3s ease";
-      if (icon) icon.style.transition = "transform 0.3s ease";
+      if (icon) {
+        icon.style.transition = "transform 0.3s ease";
+        icon.style.transform = "rotate(0deg)";
+      }
 
-      // Toggle
+      // --- Toggle dropdown ---
       toggle.addEventListener("click", e => {
-        if (e.target.closest("a")) return;
+        if (e.target.closest("a")) return; // ignore links
         e.stopPropagation();
 
         const isOpen = dropdown.classList.contains("open");
-        if (isOpen) closeDropdown(dropdown, menu, icon);
-        else openDropdown(dropdown, menu, icon);
+        if (isOpen) {
+          closeDropdown(dropdown, menu, icon);
+        } else {
+          openDropdown(dropdown, menu, icon);
+        }
+
         updateParentHeights(dropdown);
       });
 
-      // Close button
-      closeWrap.addEventListener("click", e => {
+      // --- Close button ---
+      closeBtn.addEventListener("click", e => {
         e.stopPropagation();
         closeDropdown(dropdown, menu, icon);
         updateParentHeights(dropdown);
@@ -53,18 +48,21 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // --- Helper: open dropdown ---
   function openDropdown(dropdown, menu, icon) {
     dropdown.classList.add("open");
     menu.style.maxHeight = menu.scrollHeight + "px";
     if (icon) icon.style.transform = "rotate(-90deg)";
   }
 
+  // --- Helper: close dropdown ---
   function closeDropdown(dropdown, menu, icon) {
     dropdown.classList.remove("open");
     menu.style.maxHeight = "0";
     if (icon) icon.style.transform = "rotate(0deg)";
   }
 
+  // --- Helper: expand parent containers to fit visible submenus ---
   function updateParentHeights(childDropdown) {
     let parent = childDropdown.parentElement.closest(".custom_dropdown");
     while (parent) {
@@ -76,7 +74,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Run once Finsweet emits event, or wait manually
-  document.addEventListener("fs-cmsload", waitForFinsweetAndInit);
-  waitForFinsweetAndInit();
+  // Run once immediately (initial state all closed)
+  initDropdowns();
+
+  // Run again after CMS finishes loading (simple delay)
+  setTimeout(initDropdowns, 1500);
 });
