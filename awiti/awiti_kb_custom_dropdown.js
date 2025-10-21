@@ -1,24 +1,23 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Dropdown system initialized with .active auto-open");
+  console.log("🟢 Dropdown system initialized with .active auto-open + Finsweet delay");
 
-  // hide all menus by default
+  // Hide all dropdown menus initially
   document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
     menu.style.display = "none";
   });
 
-  // set base chevron rotation
+  // Set default icon rotation
   document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
     icon.style.transition = "transform 0.25s ease";
     icon.style.transformOrigin = "center";
     icon.style.transform = "rotate(90deg)";
   });
 
-  // delegated click listener
+  // Toggle click listener
   document.addEventListener("click", e => {
     const toggle = e.target.closest(".custom_dropdown_toggle");
     if (!toggle) return;
     if (e.target.closest("a")) return; // ignore link clicks
-
     e.preventDefault();
     e.stopPropagation();
 
@@ -28,8 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!menu) return;
 
     const levelCls = Array.from(dropdown.classList).find(c => c.startsWith("dropdown-lv"));
-
-    // close siblings at same level
     if (levelCls) {
       document.querySelectorAll(`.${levelCls}.open`).forEach(sib => {
         if (sib !== dropdown) {
@@ -39,11 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // toggle
     dropdown.classList.contains("open") ? closeDropdown(dropdown) : openDropdown(dropdown);
   });
 
-  // helper functions
+  // Helpers
   function openDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
@@ -60,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (icon) icon.style.transform = "rotate(90deg)";
   }
 
-  // reopen any pre-marked open dropdowns
+  // --- Auto-open for preopened dropdowns
   function expandPreOpenedDropdowns() {
     document.querySelectorAll(".custom_dropdown.open").forEach(drop => {
       const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
@@ -71,25 +67,32 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   expandPreOpenedDropdowns();
-  setTimeout(expandPreOpenedDropdowns, 1500); // safety for Finsweet load
 
-  // --- NEW: Auto-open dropdowns for .active links ---
+  // --- NEW: Detect and open dropdowns for .active links (with retry)
   function openActiveDropdowns() {
     const activeLinks = document.querySelectorAll("a.active");
-    activeLinks.forEach(link => {
-      // highlight link text
-      link.style.color = "#007BFF"; // blue color for active link
-      link.style.fontWeight = "600";
+    if (activeLinks.length === 0) {
+      console.log("⏳ No .active link yet — retrying...");
+      return false; // retry later
+    }
 
-      // climb up and open all parent dropdowns
+    activeLinks.forEach(link => {
+      link.style.color = "#007BFF";
+      link.style.fontWeight = "600";
       let parentDropdown = link.closest(".custom_dropdown");
       while (parentDropdown) {
         openDropdown(parentDropdown);
-        parentDropdown = parentDropdown.parentElement.closest(".custom_dropdown");
+        parentDropdown = parentDropdown.parentElement?.closest(".custom_dropdown");
       }
     });
+    console.log("✅ Active link dropdowns opened.");
+    return true;
   }
 
-  // run after delay to allow CMS to populate
-  setTimeout(openActiveDropdowns, 1000);
+  // Try multiple times (CMS loads asynchronously)
+  let attempts = 0;
+  const interval = setInterval(() => {
+    if (openActiveDropdowns() || attempts > 10) clearInterval(interval);
+    attempts++;
+  }, 400);
 });
