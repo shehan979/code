@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
     icon.style.transition = "transform 0.25s ease";
     icon.style.transformOrigin = "center";
-    icon.style.transform = "rotate(0deg)";
+    icon.style.transform = "rotate(90deg)";
   });
 
   // delegated click listener
