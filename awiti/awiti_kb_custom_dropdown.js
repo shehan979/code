@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Dropdown system initialized (display:block version)");
+  console.log("🟢 Dropdown system initialized (active-page auto-open)");
 
   // hide all menus by default
   document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
@@ -42,12 +42,13 @@ document.addEventListener("DOMContentLoaded", () => {
     dropdown.classList.contains("open") ? closeDropdown(dropdown) : openDropdown(dropdown);
   });
 
+  // open / close helpers
   function openDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
     drop.classList.add("open");
     if (menu) menu.style.display = "block";
-    if (icon) icon.style.transform = "rotate(-90deg)";
+    if (icon) icon.style.transform = "rotate(0deg)";
   }
 
   function closeDropdown(drop) {
@@ -55,19 +56,42 @@ document.addEventListener("DOMContentLoaded", () => {
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
     drop.classList.remove("open");
     if (menu) menu.style.display = "none";
-    if (icon) icon.style.transform = "rotate(0deg)";
+    if (icon) icon.style.transform = "rotate(90deg)";
   }
 
-  // auto-open any preopened dropdowns
+  // expand all pre-opened dropdowns
   function expandPreOpenedDropdowns() {
     document.querySelectorAll(".custom_dropdown.open").forEach(drop => {
       const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
       const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
       if (menu) menu.style.display = "block";
-      if (icon) icon.style.transform = "rotate(-90deg)";
+      if (icon) icon.style.transform = "rotate(0deg)";
     });
   }
 
   expandPreOpenedDropdowns();
   setTimeout(expandPreOpenedDropdowns, 1500); // run again after CMS inject
+
+  // --- NEW: Auto-open dropdowns for the active page link ---
+  function openActivePathDropdowns() {
+    const currentPath = window.location.pathname;
+    // find active link: either Webflow .w--current OR matching pathname
+    const activeLink = document.querySelector(
+      `a.w--current, a[href='${currentPath}']`
+    );
+
+    if (!activeLink) return;
+
+    console.log("📂 Active page detected:", currentPath);
+
+    // climb up and open all parent dropdowns
+    let parentDropdown = activeLink.closest(".custom_dropdown");
+    while (parentDropdown) {
+      openDropdown(parentDropdown);
+      parentDropdown = parentDropdown.parentElement.closest(".custom_dropdown");
+    }
+  }
+
+  // run after a short delay (to allow Finsweet items to load)
+  setTimeout(openActivePathDropdowns, 1000);
 });

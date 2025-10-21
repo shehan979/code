@@ -4,5 +4,6 @@
   .custom_dropdown_close_icon {
     transition: transform 0.25s ease;
     transform-origin: center;
+    transform: rotate(90deg);
   }
   
