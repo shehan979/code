@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
   console.log("🟢 Dropdown system initialized (page_slug-based active open)");
-
   // Hide all dropdown menus initially
   document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
     menu.style.display = "none";
