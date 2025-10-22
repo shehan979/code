@@ -1,56 +1,28 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Dropdown system initialized (Finsweet-safe auto-open)");
+  console.log("🟢 Dropdown system initialized (page_slug-based active open)");
 
-  // Hide all dropdowns initially
+  // Hide all dropdown menus initially
   document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
     menu.style.display = "none";
   });
 
-  // Chevron base rotation
+  // Rotate all chevrons to closed position
   document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
     icon.style.transition = "transform 0.25s ease";
     icon.style.transformOrigin = "center";
     icon.style.transform = "rotate(90deg)";
   });
 
-  // Click listener
-  document.addEventListener("click", e => {
-    const toggle = e.target.closest(".custom_dropdown_toggle");
-    if (!toggle) return;
-    if (e.target.closest("a")) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const dropdown = toggle.closest(".custom_dropdown");
-    const menu = dropdown.querySelector(":scope > .custom_dropdown_navigation");
-    const icon = dropdown.querySelector(":scope > .custom_dropdown_close_icon");
-    if (!menu) return;
-
-    const levelCls = Array.from(dropdown.classList).find(c => c.startsWith("dropdown-lv"));
-    if (levelCls) {
-      document.querySelectorAll(`.${levelCls}.open`).forEach(sib => {
-        if (sib !== dropdown) {
-          closeDropdown(sib);
-          sib.querySelectorAll(".custom_dropdown.open").forEach(closeDropdown);
-        }
-      });
-    }
-
-    dropdown.classList.contains("open") ? closeDropdown(dropdown) : openDropdown(dropdown);
-  });
-
-  // --- Core functions ---
+  // Helper: open dropdown
   function openDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
     drop.classList.add("open");
-    if (menu) {
-      menu.style.display = "block";
-      menu.style.removeProperty("max-height");
-    }
+    if (menu) menu.style.display = "block";
     if (icon) icon.style.transform = "rotate(0deg)";
   }
 
+  // Helper: close dropdown
   function closeDropdown(drop) {
     const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
     const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
@@ -59,39 +31,40 @@ document.addEventListener("DOMContentLoaded", () => {
     if (icon) icon.style.transform = "rotate(90deg)";
   }
 
-  // --- Detect & open for w--current ---
-  function activateCurrentLink(force = false) {
-    const current = document.querySelector("a.w--current");
-    if (!current) {
-      if (!force) console.log("⏳ No .w--current found yet");
+  // Get current page slug from URL
+  const pathParts = window.location.pathname.split("/");
+  const currentSlug = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+  console.log("📄 Current page slug:", currentSlug);
+
+  function highlightActiveSlug(slug) {
+    if (!slug) return false;
+    const activeLink = document.querySelector(`a[page_slug="${slug}"]`);
+    if (!activeLink) {
+      console.log("⏳ No link found yet for slug:", slug);
       return false;
     }
 
-    // Highlight and mark active
-    current.classList.add("active");
-    current.style.color = "#007BFF";
-    current.style.fontWeight = "600";
+    console.log("✅ Found active link for slug:", slug, activeLink);
+
+    // Highlight the link
+    activeLink.classList.add("active");
+    activeLink.style.color = "#007BFF";
+    activeLink.style.fontWeight = "600";
 
     // Open all parent dropdowns
-    let parentDropdown = current.closest(".custom_dropdown");
+    let parentDropdown = activeLink.closest(".custom_dropdown");
     while (parentDropdown) {
       openDropdown(parentDropdown);
       parentDropdown = parentDropdown.parentElement?.closest(".custom_dropdown");
     }
-    console.log("✅ Current link dropdowns opened.");
     return true;
   }
 
-  // Retry loop to wait for CMS items
+  // Retry loop (for Finsweet async rendering)
   let tries = 0;
   const interval = setInterval(() => {
-    const success = activateCurrentLink();
-    if (success || tries > 12) clearInterval(interval);
+    const success = highlightActiveSlug(currentSlug);
+    if (success || tries > 10) clearInterval(interval);
     tries++;
   }, 500);
-
-  // Final safety trigger after full page render (Finsweet finish)
-  setTimeout(() => {
-    activateCurrentLink(true);
-  }, 3000);
 });
