@@ -1,69 +1,56 @@
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("🟢 Dropdown system initialized (page_slug-based active open)");
-  // Hide all dropdown menus initially
-  document.querySelectorAll(".custom_dropdown_navigation").forEach(menu => {
-    menu.style.display = "none";
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("🟢 Dropdown system initialized");
+
+  const dropdownToggles = document.querySelectorAll(".custom_dropdown_toggle");
+
+  // === Toggle open/close on click ===
+  dropdownToggles.forEach((toggle) => {
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const dropdown = toggle.closest(".custom_dropdown");
+      const nav = dropdown.querySelector(".custom_dropdown_navigation");
+      const icon = toggle.querySelector(".custom_dropdown_close_icon");
+
+      const isOpen = dropdown.classList.contains("open");
+
+      if (isOpen) {
+        dropdown.classList.remove("open");
+        nav.style.display = "none";
+        icon.style.transform = "rotate(90deg)";
+      } else {
+        dropdown.classList.add("open");
+        nav.style.display = "block";
+        icon.style.transform = "rotate(0deg)";
+      }
+    });
   });
 
-  // Rotate all chevrons to closed position
-  document.querySelectorAll(".custom_dropdown_close_icon").forEach(icon => {
-    icon.style.transition = "transform 0.25s ease";
-    icon.style.transformOrigin = "center";
-    icon.style.transform = "rotate(90deg)";
-  });
+  // === Auto open based on current slug ===
+  const currentPath = window.location.pathname.split("/").pop();
+  if (!currentPath) return;
 
-  // Helper: open dropdown
-  function openDropdown(drop) {
-    const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
-    const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
-    drop.classList.add("open");
-    if (menu) menu.style.display = "block";
-    if (icon) icon.style.transform = "rotate(0deg)";
-  }
+  const currentLink = Array.from(document.querySelectorAll("[page_slug]"))
+    .find((link) => link.getAttribute("page_slug") === currentPath);
 
-  // Helper: close dropdown
-  function closeDropdown(drop) {
-    const menu = drop.querySelector(":scope > .custom_dropdown_navigation");
-    const icon = drop.querySelector(":scope > .custom_dropdown_close_icon");
-    drop.classList.remove("open");
-    if (menu) menu.style.display = "none";
-    if (icon) icon.style.transform = "rotate(90deg)";
-  }
+  if (currentLink) {
+    console.log("✅ Found current link:", currentPath);
 
-  // Get current page slug from URL
-  const pathParts = window.location.pathname.split("/");
-  const currentSlug = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
-  console.log("📄 Current page slug:", currentSlug);
+    // Highlight current link
+    currentLink.classList.add("active");
+    currentLink.style.color = "#007BFF";
+    currentLink.style.fontWeight = "600";
 
-  function highlightActiveSlug(slug) {
-    if (!slug) return false;
-    const activeLink = document.querySelector(`a[page_slug="${slug}"]`);
-    if (!activeLink) {
-      console.log("⏳ No link found yet for slug:", slug);
-      return false;
-    }
-
-    console.log("✅ Found active link for slug:", slug, activeLink);
-
-    // Highlight the link
-    activeLink.classList.add("active");
-    activeLink.style.color = "#007BFF";
-    activeLink.style.fontWeight = "600";
-
-    // Open all parent dropdowns
-    let parentDropdown = activeLink.closest(".custom_dropdown");
+    // Traverse up through parent dropdowns
+    let parentDropdown = currentLink.closest(".custom_dropdown");
     while (parentDropdown) {
-      openDropdown(parentDropdown);
-      parentDropdown = parentDropdown.parentElement?.closest(".custom_dropdown");
+      const nav = parentDropdown.querySelector(".custom_dropdown_navigation");
+      const icon = parentDropdown.querySelector(".custom_dropdown_close_icon");
+      parentDropdown.classList.add("open");
+      if (nav) nav.style.display = "block";
+      if (icon) icon.style.transform = "rotate(0deg)";
+      parentDropdown = parentDropdown.parentElement.closest(".custom_dropdown");
     }
-    return true;
+  } else {
+    console.warn("⚠️ No matching link for slug:", currentPath);
   }
-
-  // Retry loop (for Finsweet async rendering)
-  let tries = 0;
-  const interval = setInterval(() => {
-    const success = highlightActiveSlug(currentSlug);
-    if (success || tries > 10) clearInterval(interval);
-    tries++;
-  }, 500);
 });
