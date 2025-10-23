@@ -270,70 +270,62 @@ document.addEventListener("DOMContentLoaded", function () {
     const rightArrow = root.querySelector(".v2_slider_arow.right");
 
     let currentIndex = 0;
-    let isAnimating = false;
 
     function normalizeIndex(index, total) {
       return (index + total) % total;
     }
 
-    function updateSlider(newIndex) {
-      if (isAnimating || newIndex === currentIndex) return;
-      isAnimating = true;
-
+    function updateSlider(index) {
       const total = contentItems.length;
-      newIndex = normalizeIndex(newIndex, total);
-      const oldItem = contentItems[currentIndex];
-      const newItem = contentItems[newIndex];
+      index = normalizeIndex(index, total);
+      currentIndex = index;
 
-      // Prepare the new item
-      newItem.style.display = "flex";
-      newItem.style.opacity = "0";
-      newItem.style.transform = "translateX(30px)";
-      requestAnimationFrame(() => {
-        newItem.classList.add("active");
-      });
-
-      // Animate old item out
-      oldItem.classList.remove("active");
-      oldItem.style.opacity = "0";
-      oldItem.style.transform = "translateX(-30px)";
-
-      setTimeout(() => {
-        oldItem.style.display = "none";
-        oldItem.style.transform = "translateX(30px)";
-        oldItem.style.opacity = "0";
-        isAnimating = false;
-      }, 600);
-
-      // Update nav state
       navItems.forEach((item, i) => {
         const line = item.querySelector(".v2_slider_move-line");
-        item.classList.toggle("active", i === newIndex);
-        line?.classList.toggle("active", i === newIndex);
+
+        // Reset all classes
+        line?.classList.remove("active");
+        item.classList.remove("active", "next", "next-next", "next-next-next");
+        item.setAttribute("aria-selected", i === index ? "true" : "false");
+
+        if (i === index) {
+          line?.classList.add("active");
+          item.classList.add("active");
+        } else if (i === normalizeIndex(index + 1, total)) {
+          item.classList.add("next");
+        } else if (i === normalizeIndex(index + 2, total)) {
+          item.classList.add("next-next");
+        } else if (i === normalizeIndex(index + 3, total)) {
+          item.classList.add("next-next-next");
+        }
       });
 
-      currentIndex = newIndex;
+      contentItems.forEach((item, i) => {
+        item.classList.toggle("active", i === index);
+      });
     }
 
-    // Nav click
+    // Click on nav items
     navItems.forEach((item, i) => {
       item.addEventListener("click", () => updateSlider(i));
     });
 
-    // Arrow click
-    leftArrow?.addEventListener("click", (e) => {
-      e.preventDefault();
-      updateSlider(currentIndex - 1);
-    });
-    rightArrow?.addEventListener("click", (e) => {
-      e.preventDefault();
-      updateSlider(currentIndex + 1);
-    });
+    // Arrows
+    if (leftArrow) {
+      leftArrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        updateSlider(currentIndex - 1);
+      });
+    }
+
+    if (rightArrow) {
+      rightArrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        updateSlider(currentIndex + 1);
+      });
+    }
 
     // Initialize
-    contentItems.forEach((item, i) => {
-      item.style.display = i === 0 ? "flex" : "none";
-      item.classList.toggle("active", i === 0);
-    });
+    updateSlider(currentIndex);
   });
 });
