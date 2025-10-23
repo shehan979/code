@@ -270,76 +270,62 @@ document.addEventListener("DOMContentLoaded", function () {
     const rightArrow = root.querySelector(".v2_slider_arow.right");
 
     let currentIndex = 0;
-    let isAnimating = false;
 
     function normalizeIndex(index, total) {
       return (index + total) % total;
     }
 
-    function updateSlider(newIndex) {
-      if (isAnimating) return;
-      isAnimating = true;
-
+    function updateSlider(index) {
       const total = contentItems.length;
-      newIndex = normalizeIndex(newIndex, total);
-      const oldIndex = currentIndex;
-      currentIndex = newIndex;
+      index = normalizeIndex(index, total);
+      currentIndex = index;
 
-      const oldItem = contentItems[oldIndex];
-      const newItem = contentItems[newIndex];
-
-      // Determine direction
-      const direction = newIndex > oldIndex || (oldIndex === total - 1 && newIndex === 0) ? 1 : -1;
-
-      // Set start positions
-      newItem.classList.remove("prev", "next", "active");
-      newItem.style.transition = "none";
-      newItem.style.left = direction === 1 ? "100%" : "-100%";
-      newItem.style.opacity = "1";
-      newItem.offsetHeight; // force reflow
-
-      // Animate
-      oldItem.style.transition = "all 0.6s ease";
-      newItem.style.transition = "all 0.6s ease";
-      newItem.style.left = "0";
-      oldItem.style.left = direction === 1 ? "-100%" : "100%";
-
-      newItem.classList.add("active");
-      oldItem.classList.remove("active");
-
-      setTimeout(() => {
-        oldItem.style.transition = "none";
-        oldItem.style.left = "100%";
-        oldItem.style.opacity = "0";
-        isAnimating = false;
-      }, 600);
-
-      // Update nav highlight
       navItems.forEach((item, i) => {
         const line = item.querySelector(".v2_slider_move-line");
-        item.classList.toggle("active", i === newIndex);
-        line?.classList.toggle("active", i === newIndex);
+
+        // Reset all classes
+        line?.classList.remove("active");
+        item.classList.remove("active", "next", "next-next", "next-next-next");
+        item.setAttribute("aria-selected", i === index ? "true" : "false");
+
+        if (i === index) {
+          line?.classList.add("active");
+          item.classList.add("active");
+        } else if (i === normalizeIndex(index + 1, total)) {
+          item.classList.add("next");
+        } else if (i === normalizeIndex(index + 2, total)) {
+          item.classList.add("next-next");
+        } else if (i === normalizeIndex(index + 3, total)) {
+          item.classList.add("next-next-next");
+        }
+      });
+
+      contentItems.forEach((item, i) => {
+        item.classList.toggle("active", i === index);
       });
     }
 
-    // Nav click
+    // Click on nav items
     navItems.forEach((item, i) => {
       item.addEventListener("click", () => updateSlider(i));
     });
 
     // Arrows
-    leftArrow?.addEventListener("click", (e) => {
-      e.preventDefault();
-      updateSlider(currentIndex - 1);
-    });
+    if (leftArrow) {
+      leftArrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        updateSlider(currentIndex - 1);
+      });
+    }
 
-    rightArrow?.addEventListener("click", (e) => {
-      e.preventDefault();
-      updateSlider(currentIndex + 1);
-    });
+    if (rightArrow) {
+      rightArrow.addEventListener("click", (e) => {
+        e.preventDefault();
+        updateSlider(currentIndex + 1);
+      });
+    }
 
     // Initialize
     updateSlider(currentIndex);
   });
 });
-
