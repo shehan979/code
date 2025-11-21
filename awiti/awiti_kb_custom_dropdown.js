@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("🟢 Dropdown system initialized");
+  console.log("Dropdown system initialized");
 
   const dropdownToggles = document.querySelectorAll(".custom_dropdown_toggle");
 

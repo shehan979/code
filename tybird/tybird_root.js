@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("✅ DOM fully loaded and script initialized.");
+  console.log("DOM fully loaded and script initialized.");
 
   const input = document.getElementById("selected_location_input");
   const listWrap = document.querySelector(".location_list");
@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // --- helper: bind logic to items ---
   function bindLocationEvents(contextLabel = "Initial") {
-    console.log(`🔄 Binding location events for ${contextLabel} items...`);
+    console.log(`Binding location events for ${contextLabel} items...`);
 
     const items = listWrap.querySelectorAll(".location_item");
     const links = listWrap.querySelectorAll(".location_link");
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
       link.addEventListener("click", handleLocationClick);
     });
 
-    console.log(`✅ Event binding complete for ${contextLabel}.`);
+    console.log(`Event binding complete for ${contextLabel}.`);
   }
 
   // --- filter logic ---
